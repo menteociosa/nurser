@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Nurser — Acceso</title>
+<style>
+  :root {
+    --bg: #f5f5f5; --card: #ffffff; --primary: #2563eb;
+    --danger: #ef4444; --text: #1e293b; --muted: #64748b;
+    --border: #e2e8f0; --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    max-width: 480px; margin: 0 auto; min-height: 100dvh;
+    display: flex; flex-direction: column;
+  }
+  .brand {
+    background: var(--primary); color: #fff;
+    padding: 36px 24px 28px; text-align: center;
+  }
+  .brand-icon { font-size: 44px; margin-bottom: 8px; }
+  .brand h1 { font-size: 26px; font-weight: 700; letter-spacing: -.5px; }
+  .brand p { font-size: 14px; opacity: .8; margin-top: 4px; }
+
+  .tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--border); }
+  .tab {
+    flex: 1; padding: 14px; text-align: center;
+    font-size: 14px; font-weight: 500; color: var(--muted);
+    background: none; border: none; cursor: pointer;
+    border-bottom: 2px solid transparent; transition: .15s;
+  }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  .form-panel { display: none; padding: 24px 20px; }
+  .form-panel.active { display: block; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block; font-size: 13px; font-weight: 600;
+    color: var(--muted); margin-bottom: 6px;
+  }
+  .form-group input {
+    width: 100%; padding: 12px 14px;
+    border: 2px solid var(--border); border-radius: var(--radius);
+    font-size: 15px; font-family: inherit; transition: .15s;
+  }
+  .form-group input:focus { outline: none; border-color: var(--primary); }
+
+  .form-hint {
+    font-size: 13px; color: var(--muted);
+    margin-top: -8px; margin-bottom: 16px; line-height: 1.4;
+  }
+
+  .btn-primary {
+    width: 100%; padding: 14px; background: var(--primary); color: #fff;
+    border: none; border-radius: var(--radius);
+    font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 4px;
+  }
+  .btn-primary:active { opacity: .85; }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+  .sub-screen { display: none; padding: 24px 20px; }
+  .sub-screen.active { display: block; }
+
+  .screen-header { text-align: center; margin-bottom: 28px; }
+  .screen-header h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .screen-header p { font-size: 14px; color: var(--muted); line-height: 1.5; }
+  .screen-header b { color: var(--text); }
+
+  .otp-input { display: flex; gap: 10px; justify-content: center; margin-bottom: 24px; }
+  .otp-box {
+    width: 46px; height: 54px; border: 2px solid var(--border);
+    border-radius: 10px; font-size: 22px; font-weight: 700;
+    text-align: center; font-family: inherit; transition: .15s;
+  }
+  .otp-box:focus { outline: none; border-color: var(--primary); }
+
+  .resend-row { text-align: center; font-size: 13px; color: var(--muted); margin-top: 14px; }
+  .resend-row a { color: var(--primary); cursor: pointer; font-weight: 600; }
+
+  .edit-phone-row { text-align: center; font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .edit-phone-row a { color: var(--primary); cursor: pointer; font-weight: 500; }
+
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: #1e293b; color: #fff; padding: 10px 22px;
+    border-radius: 24px; font-size: 14px; z-index: 999;
+    opacity: 0; transition: .3s; pointer-events: none;
+    white-space: nowrap; max-width: 90vw;
+  }
+  .toast.show { opacity: 1; }
+  .toast.err { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="brand">
+  <div class="brand-icon">🏥</div>
+  <h1>Nurser</h1>
+  <p>Registro de cuidado en equipo</p>
+</div>
+
+<div id="authScreen">
+  <div class="tabs">
+    <button class="tab active" id="tabLogin" onclick="switchTab('login')">Iniciar sesión</button>
+    <button class="tab" id="tabRegister" onclick="switchTab('register')">Registrarse</button>
+  </div>
+
+  <div class="form-panel active" id="loginPanel">
+    <div class="form-group">
+      <label>Tu número de teléfono</label>
+      <input type="tel" id="loginPhone" placeholder="+52 55 1234 5678"
+             autocomplete="tel" inputmode="tel">
+    </div>
+    <p class="form-hint">Te enviaremos un código por SMS para confirmar tu identidad.</p>
+    <button class="btn-primary" id="loginBtn" onclick="doLogin()">Enviar código</button>
+  </div>
+
+  <div class="form-panel" id="registerPanel">
+    <div class="form-group">
+      <label>Nombre completo</label>
+      <input type="text" id="regName" placeholder="María López" autocomplete="name">
+    </div>
+    <div class="form-group">
+      <label>Número de teléfono</label>
+      <input type="tel" id="regPhone" placeholder="+52 55 1234 5678"
+             autocomplete="tel" inputmode="tel">
+    </div>
+    <p class="form-hint">Te enviaremos un código SMS para verificar tu número.</p>
+    <button class="btn-primary" id="registerBtn" onclick="doRegister()">Enviar código</button>
+  </div>
+</div>
+
+<div id="otpScreen" class="sub-screen">
+  <div class="screen-header">
+    <h2>📱 Ingresa el código</h2>
+    <p>Enviamos un código de 6 dígitos a<br><b id="otpPhoneDisplay"></b></p>
+  </div>
+  <div class="otp-input">
+    <input type="tel" maxlength="1" class="otp-box" id="otp0" inputmode="numeric">
+    <input type="tel" maxlength="1" class="otp-box" id="otp1" inputmode="numeric">
+    <input type="tel" maxlength="1" class="otp-box" id="otp2" inputmode="numeric">
+    <input type="tel" maxlength="1" class="otp-box" id="otp3" inputmode="numeric">
+    <input type="tel" maxlength="1" class="otp-box" id="otp4" inputmode="numeric">
+    <input type="tel" maxlength="1" class="otp-box" id="otp5" inputmode="numeric">
+  </div>
+  <button class="btn-primary" id="verifyBtn" onclick="doVerify()">Verificar</button>
+  <div class="resend-row">¿No recibiste el código? <a onclick="doResend()">Reenviar</a></div>
+  <div class="edit-phone-row"><a onclick="goBackToEdit()">← Editar número</a></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = '';
+let otpPhone   = '';
+let otpContext = 'login'; // 'login' | 'register'
+
+(async () => {
+  try {
+    const r = await fetch(API_BASE + '/users/me', { credentials: 'include' });
+    if (r.ok) window.location.replace('contributor.html');
+  } catch { /* server may be down */ }
+})();
+
+function switchTab(tab) {
+  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+  document.getElementById('loginPanel').classList.toggle('active', tab === 'login');
+  document.getElementById('registerPanel').classList.toggle('active', tab === 'register');
+}
+
+async function doLogin() {
+  const phone = document.getElementById('loginPhone').value.trim();
+  if (!phone) { showToast('Ingresa tu número', true); return; }
+
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    const r = await fetch(API_BASE + '/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) {
+      otpPhone = phone; otpContext = 'login';
+      showOtpScreen();
+    } else if (r.status === 404) {
+      showToast('Número no encontrado. ¿Primera vez? Regístrate.', true);
+      setTimeout(() => {
+        switchTab('register');
+        document.getElementById('regPhone').value = phone;
+      }, 1800);
+    } else {
+      showToast(d.detail || 'Error al enviar código', true);
+    }
+  } catch {
+    showToast('Error de conexión', true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enviar código';
+  }
+}
+
+async function doRegister() {
+  const name  = document.getElementById('regName').value.trim();
+  const phone = document.getElementById('regPhone').value.trim();
+  if (!name || !phone) { showToast('Completa nombre y teléfono', true); return; }
+
+  const btn = document.getElementById('registerBtn');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    const r = await fetch(API_BASE + '/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) {
+      otpPhone = phone; otpContext = 'register';
+      showOtpScreen();
+    } else if (r.status === 409) {
+      showToast('Número ya registrado — inicia sesión', true);
+      setTimeout(() => {
+        switchTab('login');
+        document.getElementById('loginPhone').value = phone;
+      }, 1500);
+    } else {
+      showToast(d.detail || 'Error al registrarse', true);
+    }
+  } catch {
+    showToast('Error de conexión', true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enviar código';
+  }
+}
+
+function showOtpScreen() {
+  document.getElementById('authScreen').style.display = 'none';
+  clearOtpBoxes();
+  document.getElementById('otpPhoneDisplay').textContent = otpPhone;
+  document.getElementById('otpScreen').classList.add('active');
+  setTimeout(() => document.getElementById('otp0').focus(), 50);
+}
+
+function goBackToEdit() {
+  document.getElementById('otpScreen').classList.remove('active');
+  document.getElementById('authScreen').style.display = '';
+  if (otpContext === 'register') {
+    switchTab('register');
+    document.getElementById('regPhone').value = otpPhone;
+    document.getElementById('regPhone').focus();
+  } else {
+    switchTab('login');
+    document.getElementById('loginPhone').value = otpPhone;
+    document.getElementById('loginPhone').focus();
+  }
+}
+
+function clearOtpBoxes() {
+  for (let i = 0; i < 6; i++) {
+    const el = document.getElementById(`otp${i}`);
+    if (el) el.value = '';
+  }
+}
+
+document.querySelectorAll('.otp-box').forEach((input, i) => {
+  input.addEventListener('input', () => {
+    const v = input.value.replace(/\D/g, '');
+    input.value = v.slice(0, 1);
+    if (v && i < 5) document.getElementById(`otp${i + 1}`).focus();
+    if (v && i === 5) doVerify();
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Backspace' && !input.value && i > 0)
+      document.getElementById(`otp${i - 1}`).focus();
+  });
+  input.addEventListener('paste', e => {
+    e.preventDefault();
+    const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+    [...paste.slice(0, 6)].forEach((ch, j) => {
+      const el = document.getElementById(`otp${j}`);
+      if (el) el.value = ch;
+    });
+    const focusIdx = Math.min(paste.length, 5);
+    document.getElementById(`otp${focusIdx}`)?.focus();
+    if (paste.length >= 6) setTimeout(doVerify, 100);
+  });
+});
+
+async function doVerify() {
+  const otp = [0,1,2,3,4,5].map(i => document.getElementById(`otp${i}`).value).join('');
+  if (otp.length < 6) { showToast('Ingresa el código completo'); return; }
+
+  const btn = document.getElementById('verifyBtn');
+  btn.disabled = true; btn.textContent = 'Verificando...';
+  try {
+    const r = await fetch(API_BASE + '/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ phone: otpPhone, otp })
+    });
+    if (r.ok) {
+      window.location.replace('contributor.html');
+    } else {
+      const d = await r.json().catch(() => ({}));
+      showToast(d.detail || 'Código incorrecto o expirado', true);
+      clearOtpBoxes();
+      document.getElementById('otp0').focus();
+    }
+  } catch {
+    showToast('Error de conexión', true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Verificar';
+  }
+}
+
+async function doResend() {
+  const endpoint = otpContext === 'login' ? '/auth/login' : '/auth/resend-otp';
+  try {
+    const r = await fetch(API_BASE + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: otpPhone })
+    });
+    showToast(r.ok ? '✓ Código reenviado' : 'Error al reenviar', !r.ok);
+  } catch {
+    showToast('Error de conexión', true);
+  }
+}
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('err', isError);
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>

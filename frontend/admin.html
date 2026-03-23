@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Nurser — Admin / Editor</title>
+<style>
+  :root {
+    --bg: #f5f5f5;
+    --card: #ffffff;
+    --primary: #2563eb;
+    --primary-light: #dbeafe;
+    --danger: #ef4444;
+    --danger-light: #fee2e2;
+    --success: #22c55e;
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ─────────────────────────── */
+  header {
+    background: var(--primary);
+    color: #fff;
+    padding: 14px 18px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-left {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .back-btn {
+    background: none; border: none; color: #fff;
+    font-size: 20px; cursor: pointer; padding: 4px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  header h1 { font-size: 17px; font-weight: 600; }
+  header .sub { font-size: 12px; opacity: .85; margin-top: 2px; }
+  .gear-btn {
+    background: none; border: none; color: #fff;
+    font-size: 20px; cursor: pointer; padding: 4px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Tabs ────────────────────────────── */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--card);
+    position: sticky;
+    top: 56px;
+    z-index: 90;
+  }
+  .tab {
+    flex: 1; padding: 12px 0; text-align: center;
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    background: none; border: none; cursor: pointer;
+    border-bottom: 2px solid transparent; transition: .15s;
+  }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* ── Panels ──────────────────────────── */
+  .panel { display: none; flex: 1; overflow-y: auto; padding: 16px; }
+  .panel.active { display: block; }
+
+  /* ── Section card ────────────────────── */
+  .section-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--muted); margin: 18px 0 8px;
+  }
+  .section-title:first-child { margin-top: 0; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .card h4 { font-size: 14px; margin-bottom: 4px; }
+  .card p  { font-size: 13px; color: var(--muted); }
+
+  /* ── Team info form ──────────────────── */
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block; font-size: 13px; font-weight: 600;
+    color: var(--muted); margin-bottom: 5px;
+  }
+  input[type="text"], textarea, select {
+    width: 100%; padding: 10px 12px;
+    border: 2px solid var(--border); border-radius: 8px;
+    font-size: 14px; font-family: inherit; transition: .15s;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); }
+  textarea { resize: vertical; min-height: 70px; }
+
+  /* ── Event type list ─────────────────── */
+  .event-type-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: .15s;
+  }
+  .event-type-item:active { border-color: var(--primary); background: var(--primary-light); }
+  .et-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .et-body { flex: 1; }
+  .et-name { font-weight: 600; font-size: 14px; }
+  .et-meta { font-size: 12px; color: var(--muted); }
+  .et-arrow { color: var(--muted); font-size: 18px; }
+
+  .btn-add {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; padding: 12px;
+    background: var(--primary-light); color: var(--primary);
+    border: 2px dashed var(--primary);
+    border-radius: var(--radius);
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; margin-top: 4px;
+  }
+  .btn-add:active { background: #bfdbfe; }
+
+  /* ── Members list ────────────────────── */
+  .member-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .member-row:last-child { border-bottom: none; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; color: #fff;
+  }
+  .member-info { flex: 1; }
+  .member-name { font-size: 14px; font-weight: 500; }
+  .member-email { font-size: 12px; color: var(--muted); }
+  .role-badge {
+    font-size: 11px; padding: 3px 10px;
+    border-radius: 12px; font-weight: 600;
+  }
+  .role-editor { background: #ede9fe; color: #7c3aed; }
+  .role-contributor { background: #dbeafe; color: #2563eb; }
+  .role-viewer { background: #f1f5f9; color: #64748b; }
+
+  /* ── Field editor detail ─────────────── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.4); z-index: 200;
+    align-items: flex-end; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--card); width: 100%; max-width: 480px;
+    border-radius: 16px 16px 0 0; padding: 20px;
+    max-height: 90dvh; overflow-y: auto;
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+  .modal h3 {
+    font-size: 17px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .modal-close {
+    margin-left: auto; background: none; border: none;
+    font-size: 22px; cursor: pointer; color: var(--muted);
+  }
+
+  /* ── Field row in editor ─────────────── */
+  .field-row {
+    background: var(--bg); border-radius: 10px;
+    padding: 12px; margin-bottom: 10px;
+    position: relative;
+  }
+  .field-row-head {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .field-row-head .drag { cursor: grab; color: var(--muted); font-size: 16px; }
+  .field-row-head .field-label { font-weight: 600; font-size: 14px; flex: 1; }
+  .field-row-head .field-type-badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 8px;
+    background: var(--primary-light); color: var(--primary); font-weight: 600;
+  }
+  .field-row-head .btn-del {
+    background: none; border: none; font-size: 16px; color: var(--danger);
+    cursor: pointer;
+  }
+  .field-config { font-size: 12px; color: var(--muted); }
+  .field-config span { margin-right: 12px; }
+
+  .btn-primary {
+    width: 100%; padding: 14px;
+    background: var(--primary); color: #fff;
+    border: none; border-radius: var(--radius);
+    font-size: 16px; font-weight: 600;
+    cursor: pointer; margin-top: 8px;
+  }
+  .btn-primary:active { opacity: .85; }
+  .btn-outline {
+    width: 100%; padding: 10px;
+    background: transparent; color: var(--primary);
+    border: 2px solid var(--primary);
+    border-radius: var(--radius);
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; margin-top: 8px;
+  }
+
+  /* ── Invite section ──────────────────── */
+  .invite-row {
+    display: flex; gap: 8px; margin-top: 10px;
+  }
+  .invite-row input { flex: 1; }
+  .invite-row button {
+    padding: 10px 16px; background: var(--primary);
+    color: #fff; border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* ── Toast ───────────────────────────── */
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: #1e293b; color: #fff; padding: 10px 20px;
+    border-radius: 24px; font-size: 14px; z-index: 999;
+    opacity: 0; transition: .3s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ── Status event section ──────────── */
+  .status-config {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .status-config h4 {
+    font-size: 13px; color: #92400e; margin-bottom: 10px;
+  }
+  .toggle-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0;
+    font-size: 13px;
+  }
+  .toggle {
+    width: 44px; height: 26px; background: #cbd5e1;
+    border-radius: 13px; position: relative;
+    cursor: pointer; transition: .2s; flex-shrink: 0;
+  }
+  .toggle.on { background: var(--primary); }
+  .toggle::after {
+    content: ''; position: absolute;
+    top: 3px; left: 3px; width: 20px; height: 20px;
+    background: #fff; border-radius: 50%; transition: .2s;
+  }
+  .toggle.on::after { left: 21px; }
+  .config-help {
+    font-size: 11px; color: var(--muted);
+    margin-top: 4px; padding-left: 54px;
+  }
+
+  /* ── Role selector ─────────────────── */
+  .role-select {
+    font-size: 11px; padding: 3px 6px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--card); font-weight: 600;
+    cursor: pointer; color: var(--text);
+  }
+  .role-select:disabled {
+    opacity: .5; cursor: not-allowed;
+  }
+  .last-admin-note {
+    font-size: 10px; color: var(--muted);
+    font-style: italic;
+  }
+
+  /* ── Teams panel (full-screen overlay) ── */
+  .teams-overlay {
+    display: none; position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 300;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .teams-overlay.open { display: flex; }
+  .tp-header {
+    background: var(--primary); color: #fff;
+    padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 301;
+  }
+  .tp-header h2 { font-size: 17px; font-weight: 600; }
+  .tp-close {
+    background: none; border: none; color: #fff;
+    font-size: 22px; cursor: pointer; padding: 4px;
+  }
+  .tp-section-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--muted);
+    padding: 16px 18px 6px;
+  }
+  .tp-team-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 6px 14px; padding: 14px;
+    cursor: pointer; transition: .1s;
+  }
+  .tp-team-card:active { border-color: var(--primary); }
+  .tp-team-card.active {
+    border-color: var(--primary);
+    background: var(--primary-light);
+  }
+  .tp-team-top {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 8px;
+  }
+  .tp-team-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+    background: var(--primary-light);
+  }
+  .tp-team-name { font-size: 15px; font-weight: 600; flex: 1; }
+  .tp-team-meta {
+    font-size: 12px; color: var(--muted); margin-bottom: 10px;
+  }
+  .tp-team-meta .tp-role-badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 8px;
+    font-weight: 600; display: inline-block;
+  }
+  .tp-team-desc {
+    font-size: 13px; color: var(--muted);
+    display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .tp-team-actions {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .tp-btn {
+    padding: 7px 14px;
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; transition: .15s;
+  }
+  .tp-btn:active { opacity: .8; }
+  .tp-btn-go {
+    background: var(--primary); color: #fff;
+  }
+  .tp-btn-edit {
+    background: transparent; color: var(--primary);
+    border: 1px solid var(--primary);
+  }
+  .tp-notif-row {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; color: var(--muted);
+    margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .tp-notif-row span { flex: 1; }
+  .tp-toggle {
+    width: 40px; height: 24px; background: #cbd5e1;
+    border-radius: 12px; position: relative; cursor: pointer;
+    transition: .2s; flex-shrink: 0;
+  }
+  .tp-toggle.on { background: var(--primary); }
+  .tp-toggle::after {
+    content: ''; position: absolute;
+    top: 2px; left: 2px; width: 20px; height: 20px;
+    background: #fff; border-radius: 50%; transition: .2s;
+  }
+  .tp-toggle.on::after { left: 18px; }
+  .tp-create-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin: 12px 14px; padding: 14px;
+    border: 2px dashed var(--primary);
+    border-radius: var(--radius);
+    background: var(--primary-light);
+    color: var(--primary);
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+  }
+  .tp-create-btn:active { background: #bfdbfe; }
+  .tp-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding: 8px 0;
+  }
+  .tp-footer-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    font-size: 14px; cursor: pointer;
+    transition: .1s;
+  }
+  .tp-footer-item:active { background: var(--border); }
+  .tp-footer-item .tp-fi-icon { font-size: 18px; width: 24px; text-align: center; }
+
+  /* ── Add-field modal ─────────────────── */
+  .type-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .type-option {
+    padding: 12px 8px; text-align: center;
+    border: 2px solid var(--border); border-radius: 10px;
+    cursor: pointer; font-size: 13px; font-weight: 500; transition: .15s;
+  }
+  .type-option.selected { border-color: var(--primary); background: var(--primary-light); }
+  .type-option .t-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+  .options-editor { margin-top: 8px; }
+  .opt-row {
+    display: flex; gap: 6px; align-items: center; margin-bottom: 6px;
+  }
+  .opt-row input { flex: 1; padding: 8px; }
+  .opt-row button {
+    background: none; border: none; font-size: 18px;
+    color: var(--danger); cursor: pointer;
+  }
+  .btn-add-opt {
+    font-size: 13px; color: var(--primary); background: none;
+    border: none; cursor: pointer; font-weight: 600; padding: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header>
+  <div class="header-left">
+    <button class="back-btn" onclick="window.location.href='contributor.html'" aria-label="Volver">←</button>
+    <div>
+      <h1 id="adminTeamName">Cargando...</h1>
+      <div class="sub" id="adminTeamSub">Configuración del equipo</div>
+    </div>
+  </div>
+  <button class="gear-btn" onclick="openTeamsPanel()" aria-label="Menú">⚙️</button>
+</header>
+
+<!-- ═══ TABS ═══ -->
+<div class="tabs">
+  <button class="tab active" data-tab="teamPanel">🏠 Equipo</button>
+  <button class="tab" data-tab="eventsPanel">📋 Eventos</button>
+  <button class="tab" data-tab="membersPanel">👥 Miembros</button>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PANEL: Team Info                        -->
+<!-- ════════════════════════════════════════ -->
+<div class="panel active" id="teamPanel">
+  <div class="form-group">
+    <label>Nombre del equipo</label>
+    <input type="text" id="teamNameInput" placeholder="Nombre del equipo">
+  </div>
+  <div class="form-group">
+    <label>Descripción / Contexto del paciente</label>
+    <textarea id="teamDescInput" placeholder="Describe el contexto del paciente..."></textarea>
+  </div>
+
+  <div class="status-config">
+    <h4>Estado (ej: en turno, fuera de turno)</h4>
+    <div class="toggle-row">
+      <div class="toggle on" id="toggleStatusEvent" onclick="this.classList.toggle('on')"></div>
+      <span>Habilitar botón de inicio / fin de turno</span>
+    </div>
+    <div class="config-help">Habilitar para todos los miembros del equipo? Además de marcar su propio estado todos los miembros podrán ver el estado de los demás.</div>
+    <br>
+    <div class="form-group" style="margin-top:12px;margin-bottom:8px">
+      <label>Sí (activo)</label>
+      <input type="text" placeholder="Iniciar turno" style="font-size:13px;padding:8px 10px">
+    </div>
+    <div class="form-group" style="margin-bottom:8px">
+      <label>No (inactivo)</label>
+      <input type="text" placeholder="Terminar turno" style="font-size:13px;padding:8px 10px">
+    </div>
+
+    <div class="toggle-row" style="margin-top:4px">
+      <div class="toggle on" id="toggleNotifyStatus" onclick="this.classList.toggle('on')"></div>
+      <span>Notificar al equipo al iniciar/terminar</span>
+    </div>
+    <div class="config-help">Enviar notificacion de cambio a todos los miembros.</div>
+
+    <div class="toggle-row">
+      <div class="toggle" id="toggleNotifyPin" onclick="this.classList.toggle('on')"></div>
+      <span>Notificar al editar nota fijada</span>
+    </div>
+  </div>
+
+  <button class="btn-primary" onclick="saveTeamInfo()">Guardar cambios</button>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PANEL: Event Types (the core editor)    -->
+<!-- ════════════════════════════════════════ -->
+<div class="panel" id="eventsPanel">
+  <p class="section-title">Tipos de evento definidos</p>
+
+  <div id="eventTypeList">
+    <!-- rendered by JS -->
+  </div>
+
+  <button class="btn-add" onclick="openAddEvent()">+ Agregar tipo de evento</button>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PANEL: Members                          -->
+<!-- ════════════════════════════════════════ -->
+<div class="panel" id="membersPanel">
+  <p class="section-title">Miembros del equipo</p>
+
+  <div class="card" style="padding: 0 14px;" id="membersList">
+    <!-- rendered by JS -->
+  </div>
+
+  <p class="section-title">Invitar nuevo miembro</p>
+  <div class="card" id="inviteCard">
+    <div class="form-group" style="margin-bottom:8px">
+      <label>Rol para el nuevo miembro</label>
+      <select id="inviteRole">
+        <option value="contributor">Contribuidor</option>
+        <option value="admin">Editor (Admin)</option>
+        <option value="viewer">Visor</option>
+      </select>
+    </div>
+    <div class="invite-row">
+      <input type="text" id="inviteCodeDisplay" placeholder="Código generado aquí" readonly
+        style="letter-spacing:3px;font-size:16px;font-weight:600;text-transform:uppercase">
+      <button onclick="generateInviteCode()">Generar</button>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:8px">Comparte este código para que el miembro se una al equipo.</p>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Edit event type ═══ -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══ TEAMS PANEL (full-screen) ═══ -->
+<div class="teams-overlay" id="teamsPanel">
+  <div class="tp-header">
+    <h2>Mis equipos</h2>
+    <button class="tp-close" onclick="closeTeamsPanel()">✕</button>
+  </div>
+
+  <div class="tp-section-title">Equipo activo (editando)</div>
+
+  <div class="tp-team-card active">
+    <div class="tp-team-top">
+      <div class="tp-team-icon">👩‍⚕️</div>
+      <div class="tp-team-name">Cuidado de Sandra</div>
+    </div>
+    <div class="tp-team-meta">
+      <span class="tp-role-badge" style="background:#ede9fe;color:#7c3aed">Editor</span>
+      · 4 miembros · 23 eventos hoy
+    </div>
+    <div class="tp-team-desc">Paciente femenina, 72 años. Diabetes tipo 2, hipertensión controlada.</div>
+    <div class="tp-team-actions">
+      <button class="tp-btn tp-btn-go" onclick="window.open('contributor.html','_self')">Ir al equipo</button>
+      <button class="tp-btn tp-btn-edit" onclick="closeTeamsPanel(); showToast('Ya estás editando este equipo')">Editar</button>
+    </div>
+    <div class="tp-notif-row">
+      <span>🔔 Notificaciones</span>
+      <div class="tp-toggle on" onclick="event.stopPropagation(); this.classList.toggle('on')"></div>
+    </div>
+  </div>
+
+  <div class="tp-section-title">Otros equipos</div>
+
+  <div class="tp-team-card">
+    <div class="tp-team-top">
+      <div class="tp-team-icon">🧓</div>
+      <div class="tp-team-name">Cuidado de Don Carlos</div>
+    </div>
+    <div class="tp-team-meta">
+      <span class="tp-role-badge" style="background:#ede9fe;color:#7c3aed">Editor</span>
+      · 3 miembros · 8 eventos hoy
+    </div>
+    <div class="tp-team-desc">Paciente masculino, 85 años. Alzheimer etapa temprana, marcapasos.</div>
+    <div class="tp-team-actions">
+      <button class="tp-btn tp-btn-go" onclick="showToast('Cambiando a Cuidado de Don Carlos...')">Ir al equipo</button>
+      <button class="tp-btn tp-btn-edit" onclick="showToast('Abriendo editor...')">Editar</button>
+    </div>
+    <div class="tp-notif-row">
+      <span>🔔 Notificaciones</span>
+      <div class="tp-toggle on" onclick="event.stopPropagation(); this.classList.toggle('on')"></div>
+    </div>
+  </div>
+
+  <div class="tp-team-card">
+    <div class="tp-team-top">
+      <div class="tp-team-icon">👶</div>
+      <div class="tp-team-name">Apoyo a Familia Ruiz</div>
+    </div>
+    <div class="tp-team-meta">
+      <span class="tp-role-badge" style="background:#dbeafe;color:#2563eb">Contribuidor</span>
+      · 6 miembros · 12 eventos hoy
+    </div>
+    <div class="tp-team-desc">Recién nacido prematuro. Monitoreo de alimentación y temperatura.</div>
+    <div class="tp-team-actions">
+      <button class="tp-btn tp-btn-go" onclick="showToast('Cambiando a Apoyo a Familia Ruiz...')">Ir al equipo</button>
+    </div>
+    <div class="tp-notif-row">
+      <span>🔔 Notificaciones</span>
+      <div class="tp-toggle" onclick="event.stopPropagation(); this.classList.toggle('on')"></div>
+    </div>
+  </div>
+
+  <div class="tp-create-btn" onclick="showToast('Crear nuevo equipo...')">
+    ＋ Crear nuevo equipo
+  </div>
+
+  <div class="tp-footer">
+    <div class="tp-footer-item" onclick="window.open('profile.html','_self')">
+      <span class="tp-fi-icon">👤</span> Mi perfil
+    </div>
+    <div class="tp-footer-item" onclick="apiFetch('/auth/logout',{method:'POST'}).then(()=>window.location.replace('login.html'))">
+      <span class="tp-fi-icon">🚪</span> <span style="color:var(--danger)">Cerrar sesión</span>
+    </div>
+  </div>
+
+  <!-- Support / Feedback Form -->
+  <div style="padding:16px 18px; border-top:1px solid var(--border);">
+    <div style="font-size:13px; font-weight:600; margin-bottom:10px;">📩 Soporte / Feedback</div>
+    <div style="margin-bottom:8px;">
+      <input type="text" id="supportPhone" readonly
+        style="width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-secondary); color:var(--text-secondary); font-size:13px;"
+        value="+52 155 1234 5678">
+    </div>
+    <div style="margin-bottom:8px;">
+      <textarea id="supportMessage" rows="3" placeholder="Escribe tu comentario o problema..."
+        style="width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; resize:vertical; font-family:inherit;"></textarea>
+    </div>
+    <button onclick="sendFeedback()" style="width:100%; padding:10px; border:none; border-radius:8px; background:var(--primary); color:#fff; font-size:14px; font-weight:600; cursor:pointer;">
+      Enviar
+    </button>
+  </div>
+</div>
+
+<script>
+const API_BASE = '';
+
+// ── State ──
+let teamId = null;
+let currentTeam = null;
+let eventTypesData = [];
+let membersData = [];
+let currentUser = null;
+
+// ── XSS-safe helper ──
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Authenticated fetch ──
+async function apiFetch(path, opts = {}) {
+  return fetch(API_BASE + path, { credentials: 'include', ...opts });
+}
+
+// ── JSON helper ──
+function safeParseJSON(s, fallback) {
+  if (s == null) return fallback;
+  try { const v = JSON.parse(s); return v ?? fallback; } catch { return fallback; }
+}
+
+// ── Init ──
+async function init() {
+  // Auth check
+  try {
+    const r = await apiFetch('/users/me');
+    if (!r.ok) { window.location.replace('login.html'); return; }
+    currentUser = await r.json();
+  } catch {
+    window.location.replace('login.html'); return;
+  }
+
+  // Get team id from URL or localStorage
+  const params = new URLSearchParams(window.location.search);
+  teamId = params.get('team_id') || localStorage.getItem('activeTeamId');
+  if (!teamId) { window.location.replace('contributor.html'); return; }
+
+  await Promise.all([loadTeam(), loadEventTypes(), loadMembers()]);
+
+  // Populate support phone
+  document.getElementById('supportPhone').value = currentUser.phone || '';
+}
+
+// ── Team info ──
+async function loadTeam() {
+  const r = await apiFetch(`/teams/${teamId}`);
+  if (!r.ok) { showToast('Error cargando equipo'); return; }
+  currentTeam = await r.json();
+  document.getElementById('adminTeamName').textContent = currentTeam.name;
+  document.getElementById('teamNameInput').value = currentTeam.name || '';
+  document.getElementById('teamDescInput').value = currentTeam.description || '';
+}
+
+async function saveTeamInfo() {
+  const name = document.getElementById('teamNameInput').value.trim();
+  const desc = document.getElementById('teamDescInput').value.trim();
+  if (!name) { showToast('⚠️ El nombre es requerido'); return; }
+  try {
+    const r = await apiFetch(`/teams/${teamId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description: desc || null })
+    });
+    if (!r.ok) throw new Error();
+    currentTeam = await r.json();
+    document.getElementById('adminTeamName').textContent = currentTeam.name;
+
+    // Sync shift event type with the toggle state
+    const wantShift = document.getElementById('toggleStatusEvent')?.classList.contains('on');
+    const existingShift = eventTypesData.find(et => et.is_header);
+    if (wantShift && !existingShift) {
+      // Create the shift event type
+      await apiFetch(`/teams/${teamId}/event-types`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Turno', field_type: 'timestamp_event', icon: '⏱️', color: '#dbeafe', is_header: 1 })
+      });
+      await loadEventTypes();
+    } else if (!wantShift && existingShift) {
+      // Deactivate — set is_header to 0
+      await apiFetch(`/teams/${teamId}/event-types/${existingShift.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_header: 0 })
+      });
+      await loadEventTypes();
+    }
+
+    showToast('✅ Equipo actualizado');
+  } catch {
+    showToast('❌ Error al guardar');
+  }
+}
+
+// ── Event Types ──
+async function loadEventTypes() {
+  const r = await apiFetch(`/teams/${teamId}/event-types`);
+  if (!r.ok) return;
+  eventTypesData = await r.json();
+  // Sync the toggle to reflect whether a shift event type actually exists
+  const shiftEt = eventTypesData.find(et => et.is_header);
+  const toggle = document.getElementById('toggleStatusEvent');
+  if (toggle) toggle.classList.toggle('on', !!shiftEt);
+  renderEventTypes();
+}
+
+function renderEventTypes() {
+  const list = document.getElementById('eventTypeList');
+
+  if (!eventTypesData.length) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--muted);text-align:center;padding:12px">Sin tipos de evento. Agrega uno.</p>';
+    return;
+  }
+
+  const FIELD_LABELS = {
+    text: 'Texto libre', boolean: 'Sí / No', numeric: 'Número',
+    dropdown: 'Seleccionar uno', multi_select: 'Seleccionar varios',
+    timestamp_event: 'Turno (inicio/fin)'
+  };
+
+  list.innerHTML = eventTypesData.map(et => `
+    <div class="event-type-item" onclick="openEditEvent('${et.id}')">
+      <div class="et-icon" style="background:${et.color || '#f1f5f9'}">${et.icon || '📌'}</div>
+      <div class="et-body">
+        <div class="et-name">${escHtml(et.name)}</div>
+        <div class="et-meta">${FIELD_LABELS[et.field_type] || et.field_type}${et.is_header ? ' · 🔑 Turno' : ''}</div>
+      </div>
+      <span class="et-arrow">›</span>
+    </div>
+  `).join('');
+}
+
+function openAddEvent() {
+  renderEventModal(null, true);
+}
+
+function openEditEvent(typeId) {
+  const et = eventTypesData.find(x => x.id === typeId);
+  if (et) renderEventModal(et, false);
+}
+
+function renderEventModal(et, isNew) {
+  const name = isNew ? '' : (et?.name || '');
+  const icon = isNew ? '📌' : (et?.icon || '📌');
+  const color = isNew ? '#f1f5f9' : (et?.color || '#f1f5f9');
+  const fieldType = isNew ? 'text' : (et?.field_type || 'text');
+  const optionsArr = safeParseJSON(et?.options, []);
+  const optionsText = optionsArr.join('\n');
+
+  document.getElementById('modalContent').innerHTML = `
+    <h3>${isNew ? '➕ Nuevo tipo de evento' : `✏️ Editar: ${escHtml(name)}`}
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </h3>
+    <div class="form-group">
+      <label>Nombre</label>
+      <input type="text" id="etName" value="${escHtml(name)}" placeholder="Ej: Baño, Medicamento...">
+    </div>
+    <div class="form-group" style="display:flex;gap:12px;align-items:flex-end">
+      <div style="flex:0 0 auto">
+        <label>Icono (emoji)</label>
+        <input type="text" id="etIcon" value="${escHtml(icon)}" style="width:60px;text-align:center;font-size:24px;padding:8px" oninput="limitIconInput(this)">
+      </div>
+      <div style="flex:1">
+        <label>Color de fondo</label>
+        <input type="color" id="etColor" value="${escHtml(color)}" style="width:100%;height:40px;padding:2px;border-radius:8px;border:2px solid var(--border)">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Tipo de campo</label>
+      <select id="etFieldType" onchange="updateAdminOptionsSection()">
+        <option value="text"             ${fieldType==='text'?'selected':''}>📝 Texto libre</option>
+        <option value="boolean"          ${fieldType==='boolean'?'selected':''}>✅ Sí / No</option>
+        <option value="numeric"          ${fieldType==='numeric'?'selected':''}>🔢 Número</option>
+        <option value="dropdown"         ${fieldType==='dropdown'?'selected':''}>🔘 Seleccionar uno</option>
+        <option value="multi_select"     ${fieldType==='multi_select'?'selected':''}>☑️ Seleccionar varios</option>
+        <option value="timestamp_event"  ${fieldType==='timestamp_event'?'selected':''}>⏱️ Evento de tiempo</option>
+      </select>
+    </div>
+    <div id="adminOptionsSection" style="${['dropdown','multi_select'].includes(fieldType)?'':'display:none'}">
+      <div class="form-group">
+        <label>Opciones (una por línea)</label>
+        <textarea id="etOptions" rows="4" placeholder="Opción 1\nOpción 2\nOpción 3">${escHtml(optionsText)}</textarea>
+      </div>
+    </div>
+    ${!isNew ? `<button class="btn-outline" style="color:var(--danger);border-color:var(--danger);margin-top:4px" onclick="deleteEventType('${et.id}')">🗑️ Eliminar tipo de evento</button>` : ''}
+    <button class="btn-primary" onclick="saveEventType('${isNew ? '' : et.id}', ${isNew})" style="margin-top:12px">
+      ${isNew ? 'Crear tipo de evento' : 'Guardar cambios'}
+    </button>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function limitIconInput(el) {
+  // Trim to first 2 Unicode code points (emoji-safe)
+  const codePoints = [...el.value];
+  if (codePoints.length > 2) el.value = codePoints.slice(0, 2).join('');
+}
+
+function updateAdminOptionsSection() {
+  const type = document.getElementById('etFieldType')?.value;
+  const section = document.getElementById('adminOptionsSection');
+  if (section) section.style.display = ['dropdown', 'multi_select'].includes(type) ? '' : 'none';
+}
+
+async function saveEventType(typeId, isNew) {
+  const name = document.getElementById('etName').value.trim();
+  if (!name) { showToast('⚠️ Ingresa un nombre'); return; }
+  const icon = document.getElementById('etIcon').value.trim() || '📌';
+  const color = document.getElementById('etColor').value;
+  const fieldType = document.getElementById('etFieldType').value;
+  let options = null;
+  if (['dropdown', 'multi_select'].includes(fieldType)) {
+    const opts = (document.getElementById('etOptions')?.value || '').split('\n').map(s => s.trim()).filter(Boolean);
+    if (!opts.length) { showToast('⚠️ Agrega al menos una opción'); return; }
+    options = JSON.stringify(opts);
+  }
+  const payload = { name, icon, color, field_type: fieldType, options };
+  const url = isNew ? `/teams/${teamId}/event-types` : `/teams/${teamId}/event-types/${typeId}`;
+  const method = isNew ? 'POST' : 'PATCH';
+  const btn = document.querySelector('#modalContent .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+  try {
+    const r = await apiFetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) throw new Error();
+    closeModal();
+    showToast(`✅ "${name}" guardado`);
+    await loadEventTypes();
+  } catch {
+    showToast('❌ Error al guardar');
+    if (btn) { btn.disabled = false; }
+  }
+}
+
+async function deleteEventType(typeId) {
+  const et = eventTypesData.find(x => x.id === typeId);
+  if (!confirm(`¿Eliminar "${et?.name}"?`)) return;
+  try {
+    const r = await apiFetch(`/teams/${teamId}/event-types/${typeId}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error();
+    closeModal();
+    showToast(`🗑️ Tipo de evento eliminado`);
+    await loadEventTypes();
+  } catch {
+    showToast('❌ Error al eliminar');
+  }
+}
+
+// ── Members ──
+async function loadMembers() {
+  const r = await apiFetch(`/teams/${teamId}/members`);
+  if (!r.ok) return;
+  membersData = await r.json();
+  renderMembers();
+}
+
+function renderMembers() {
+  const list = document.getElementById('membersList');
+  const roleColors = {
+    admin: '#ede9fe', contributor: '#dbeafe', viewer: '#f1f5f9'
+  };
+  const roleTextColors = {
+    admin: '#7c3aed', contributor: '#2563eb', viewer: '#64748b'
+  };
+  const roleLabels = { admin: 'Editor', contributor: 'Contribuidor', viewer: 'Visor' };
+  const adminCount = membersData.filter(m => m.role === 'admin').length;
+  const myId = currentUser?.id;
+
+  list.innerHTML = membersData.map(m => {
+    const isMe = m.id === myId;
+    const isLastAdmin = m.role === 'admin' && adminCount === 1 && isMe;
+    const initial = (m.name || '?').charAt(0).toUpperCase();
+    const avatarColor = '#' + (Math.abs(hashStr(m.id)) % 0xffffff).toString(16).padStart(6, '0').replace(/^(.{2})(.{2})(.{2})$/, (_, r, g, b) =>
+      (Math.min(parseInt(r, 16), 180)).toString(16).padStart(2,'0') +
+      (Math.min(parseInt(g, 16), 180)).toString(16).padStart(2,'0') +
+      (Math.min(parseInt(b, 16), 180)).toString(16).padStart(2,'0')
+    );
+    return `
+      <div class="member-row">
+        <div class="avatar" style="background:${avatarColor}">${initial}</div>
+        <div class="member-info">
+          <div class="member-name">${escHtml(m.name)}${isMe ? ' (tú)' : ''}</div>
+          <div class="member-email">${escHtml(m.phone || m.email || '')}</div>
+          ${isLastAdmin ? '<span class="last-admin-note">Único editor — no puedes cambiar tu rol</span>' : ''}
+        </div>
+        <select class="role-select" data-id="${m.id}" onchange="changeMemberRole('${m.id}', this.value)" ${isLastAdmin ? 'disabled' : ''}>
+          <option value="admin"        ${m.role==='admin'?'selected':''}>Editor</option>
+          <option value="contributor"  ${m.role==='contributor'?'selected':''}>Contribuidor</option>
+          <option value="viewer"       ${m.role==='viewer'?'selected':''}>Visor</option>
+        </select>
+        ${!isMe ? `<button onclick="removeMember('${m.id}','${escHtml(m.name)}')" style="background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;padding:4px;margin-left:4px" title="Eliminar">✕</button>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  return h;
+}
+
+async function changeMemberRole(userId, newRole) {
+  try {
+    const r = await apiFetch(`/teams/${teamId}/members/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: newRole })
+    });
+    if (!r.ok) throw new Error();
+    showToast('✅ Rol actualizado');
+    await loadMembers();
+  } catch {
+    showToast('❌ Error al cambiar rol');
+    await loadMembers(); // revert UI
+  }
+}
+
+async function removeMember(userId, name) {
+  if (!confirm(`¿Eliminar a ${name} del equipo?`)) return;
+  try {
+    const r = await apiFetch(`/teams/${teamId}/members/${userId}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error();
+    showToast(`🗑️ ${name} eliminado`);
+    await loadMembers();
+  } catch {
+    showToast('❌ Error al eliminar miembro');
+  }
+}
+
+// ── Invite code ──
+async function generateInviteCode() {
+  const role = document.getElementById('inviteRole').value;
+  try {
+    const r = await apiFetch(`/teams/${teamId}/invite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role })
+    });
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    document.getElementById('inviteCodeDisplay').value = data.code;
+    showToast('✅ Código generado — compártelo');
+  } catch {
+    showToast('❌ Error al generar código');
+  }
+}
+
+// ── Support feedback ──
+async function sendFeedback() {
+  const message = document.getElementById('supportMessage').value.trim();
+  if (!message) { showToast('⚠️ Escribe un mensaje'); return; }
+  try {
+    const r = await apiFetch('/support/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    if (!r.ok) throw new Error();
+    document.getElementById('supportMessage').value = '';
+    showToast('✅ Feedback enviado. ¡Gracias!');
+  } catch {
+    showToast('❌ Error al enviar feedback');
+  }
+}
+
+// ── Tabs ──
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Modal ──
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+// ── Teams panel ──
+function openTeamsPanel() {
+  document.getElementById('teamsPanel').classList.add('open');
+}
+function closeTeamsPanel() {
+  document.getElementById('teamsPanel').classList.remove('open');
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Mi Perfil</title>
+<style>
+  :root {
+    --bg: #f5f5f5;
+    --card: #ffffff;
+    --primary: #2563eb;
+    --primary-light: #dbeafe;
+    --danger: #ef4444;
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100dvh;
+  }
+  header {
+    background: var(--primary); color: #fff;
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .back-btn {
+    background: none; border: none; color: #fff;
+    font-size: 20px; cursor: pointer;
+  }
+  header h1 { font-size: 17px; font-weight: 600; }
+
+  .avatar-section {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 28px 16px 20px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+  }
+  .avatar-big {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: var(--primary); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .avatar-name { font-size: 18px; font-weight: 600; }
+  .avatar-email { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  .content { padding: 16px; }
+  .section-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--muted); margin: 16px 0 8px;
+  }
+  .section-title:first-child { margin-top: 0; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+  }
+  .form-row {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .form-row:last-child { border-bottom: none; }
+  .form-row label {
+    display: block; font-size: 12px; font-weight: 600;
+    color: var(--muted); margin-bottom: 4px;
+  }
+  .form-row input {
+    width: 100%; border: none; font-size: 15px;
+    font-family: inherit; color: var(--text);
+    background: transparent; outline: none;
+  }
+  .form-row .readonly {
+    color: var(--muted);
+  }
+
+  .btn-primary {
+    width: 100%; padding: 14px;
+    background: var(--primary); color: #fff;
+    border: none; border-radius: var(--radius);
+    font-size: 16px; font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-primary:active { opacity: .85; }
+  .btn-danger-outline {
+    width: 100%; padding: 12px;
+    background: transparent; color: var(--danger);
+    border: 2px solid var(--danger);
+    border-radius: var(--radius);
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; margin-top: 8px;
+  }
+
+  .menu-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px; border-bottom: 1px solid var(--border);
+    cursor: pointer; font-size: 14px;
+  }
+  .menu-item:last-child { border-bottom: none; }
+  .menu-item:active { background: var(--bg); }
+  .menu-item .m-icon { font-size: 18px; width: 24px; text-align: center; }
+  .menu-item .m-label { flex: 1; }
+  .menu-item .m-arrow { color: var(--muted); }
+
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: #1e293b; color: #fff; padding: 10px 20px;
+    border-radius: 24px; font-size: 14px; z-index: 999;
+    opacity: 0; transition: .3s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="back-btn" onclick="history.back()">←</button>
+  <h1>Mi Perfil</h1>
+</header>
+
+<div class="avatar-section">
+  <div class="avatar-big" id="avatarBig">?</div>
+  <div class="avatar-name" id="avatarName">Cargando...</div>
+  <div class="avatar-email" id="avatarEmail"></div>
+</div>
+
+<div class="content">
+  <div class="section-title">Información personal</div>
+  <div class="card">
+    <div class="form-row">
+      <label>Nombre</label>
+      <input type="text" id="profileName" value="" placeholder="Tu nombre">
+    </div>
+    <div class="form-row">
+      <label>Correo electrónico</label>
+      <input type="text" id="profileEmail" value="" placeholder="opcional">
+    </div>
+    <div class="form-row">
+      <label>Teléfono</label>
+      <input type="text" id="profilePhone" value="" class="readonly" readonly>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">Para cambiar tu número contacta soporte</div>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="saveProfile()">Guardar cambios</button>
+
+  <div class="section-title">General</div>
+  <div class="card">
+    <div class="menu-item" onclick="window.location.href='contributor.html'">
+      <span class="m-icon">👥</span>
+      <span class="m-label">Mis equipos</span>
+      <span class="m-arrow">›</span>
+    </div>
+    <div class="menu-item" onclick="showToast('Idioma: Español (MX)')">
+      <span class="m-icon">🌐</span>
+      <span class="m-label">Idioma</span>
+      <span class="m-arrow" style="font-size:13px;color:var(--text)">Español ›</span>
+    </div>
+  </div>
+
+  <button class="btn-danger-outline" onclick="doLogout()">🚪 Cerrar sesión</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = '';
+let currentUser = null;
+
+async function init() {
+  try {
+    const r = await fetch(API_BASE + '/users/me', { credentials: 'include' });
+    if (!r.ok) { window.location.replace('login.html'); return; }
+    currentUser = await r.json();
+    populateProfile(currentUser);
+  } catch {
+    window.location.replace('login.html');
+  }
+}
+
+function populateProfile(user) {
+  document.getElementById('profileName').value = user.name || '';
+  document.getElementById('profileEmail').value = user.email || '';
+  document.getElementById('profilePhone').value = user.phone || '';
+  document.getElementById('avatarBig').textContent = (user.name || '?').charAt(0).toUpperCase();
+  document.getElementById('avatarName').textContent = user.name || '';
+  document.getElementById('avatarEmail').textContent = user.email || user.phone || '';
+}
+
+async function saveProfile() {
+  const name = document.getElementById('profileName').value.trim();
+  const email = document.getElementById('profileEmail').value.trim();
+  if (!name) { showToast('⚠️ El nombre es requerido'); return; }
+  try {
+    const r = await fetch(API_BASE + '/users/me', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name, email: email || null })  // phone is not editable
+    });
+    if (!r.ok) throw new Error();
+    const updated = await r.json();
+    populateProfile(updated);
+    showToast('✅ Perfil actualizado');
+  } catch {
+    showToast('❌ Error al actualizar perfil');
+  }
+}
+
+async function doLogout() {
+  await fetch(API_BASE + '/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+  window.location.replace('login.html');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+init();
+</script>
+</body>
+</html>

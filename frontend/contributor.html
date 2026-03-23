@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Nurser — Contribuidor</title>
+<style>
+  :root {
+    --bg: #f5f5f5;
+    --card: #ffffff;
+    --primary: #2563eb;
+    --primary-light: #dbeafe;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ────────────────────────────── */
+  header {
+    background: var(--primary);
+    color: #fff;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-size: 17px; font-weight: 600; }
+  header .team-info {
+    font-size: 12px; opacity: .85;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 240px;
+    cursor: pointer;
+  }
+  header .team-info::after {
+    content: ' ℹ️';
+    font-size: 10px;
+  }
+  .header-right {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .user-badge {
+    background: rgba(255,255,255,.2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 13px;
+  }
+  .gear-btn {
+    background: none; border: none; color: #fff;
+    font-size: 20px; cursor: pointer; padding: 4px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Shift banner ──────────────────────── */
+  .shift-banner {
+    background: #ecfdf5;
+    border-bottom: 1px solid #bbf7d0;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #166534;
+  }
+  .shift-banner.off {
+    background: #fef9c3;
+    border-color: #fde68a;
+    color: #92400e;
+  }
+  .shift-btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .shift-btn.start { background: var(--success); color: #fff; }
+  .shift-btn.end   { background: var(--danger); color: #fff; }
+
+  /* ── Tabs ───────────────────────────────── */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--card);
+    position: sticky;
+    top: 53px;
+    z-index: 90;
+  }
+  .tab {
+    flex: 1;
+    padding: 12px 0;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: .15s;
+  }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* ── Panels ─────────────────────────────── */
+  .panel { display: none; flex: 1; overflow-y: auto; padding: 14px; }
+  .panel.active { display: block; }
+
+  /* ── Quick Event Buttons ────────────────── */
+  .event-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .event-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 20px 10px;
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .event-btn:active {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    transform: scale(.97);
+  }
+  .event-btn .icon { font-size: 28px; }
+
+  /* ── Modal ──────────────────────────────── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.4);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--card);
+    width: 100%;
+    max-width: 480px;
+    border-radius: 16px 16px 0 0;
+    padding: 20px;
+    max-height: 85dvh;
+    overflow-y: auto;
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+  .modal h3 {
+    font-size: 17px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .modal-close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    color: var(--muted);
+  }
+
+  /* ── Form elements ──────────────────────── */
+  .field-group { margin-bottom: 16px; }
+  .field-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .radio-pill input { display: none; }
+  .radio-pill span {
+    display: inline-block;
+    padding: 8px 16px;
+    border: 2px solid var(--border);
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: .15s;
+  }
+  .radio-pill input:checked + span {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+  .check-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .check-item input[type="checkbox"] {
+    width: 20px; height: 20px;
+    accent-color: var(--primary);
+  }
+  input[type="text"], input[type="datetime-local"], textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: .15s;
+  }
+  input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  .slider-row {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .slider-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--primary);
+    height: 28px;
+  }
+  .slider-val {
+    min-width: 36px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--primary);
+  }
+  .toggle-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 0;
+  }
+  .toggle {
+    width: 48px; height: 28px;
+    background: #cbd5e1;
+    border-radius: 14px;
+    position: relative;
+    cursor: pointer;
+    transition: .2s;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--primary); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 22px; height: 22px;
+    background: #fff;
+    border-radius: 50%;
+    transition: .2s;
+  }
+  .toggle.on::after { left: 23px; }
+  .btn-save {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .btn-save:active { opacity: .85; }
+
+  /* ── Timeline ───────────────────────────── */
+  .timeline-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tl-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .tl-body { flex: 1; }
+  .tl-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 2px;
+  }
+  .tl-type { font-weight: 600; font-size: 14px; }
+  .tl-time { font-size: 12px; color: var(--muted); }
+  .tl-detail { font-size: 13px; color: var(--muted); }
+  .tl-user { font-size: 12px; color: var(--primary); margin-top: 2px; }
+  .tl-note {
+    margin-top: 4px;
+    font-size: 12px;
+    font-style: italic;
+    color: #78716c;
+    background: #fafaf9;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+
+  /* ── Pinned note ─────────────────────────── */
+  .pinned-note {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius);
+    padding: 14px;
+    margin: 14px;
+    margin-bottom: 0;
+  }
+  .pinned-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .pinned-head h4 { font-size: 13px; color: var(--primary); margin: 0; }
+  .pinned-edit-btn {
+    background: none; border: 1px solid var(--primary);
+    color: var(--primary); font-size: 12px; font-weight: 600;
+    padding: 3px 10px; border-radius: 8px; cursor: pointer;
+  }
+  .pinned-edit-btn:active { background: var(--primary-light); }
+  .pinned-note p { font-size: 13px; }
+  .pinned-note .pinned-meta {
+    font-size: 11px; color: var(--muted); margin-top: 6px;
+  }
+
+  /* ── Description modal ──────────────────── */
+  .desc-modal-body {
+    font-size: 14px; line-height: 1.5;
+    white-space: pre-wrap;
+  }
+
+  /* ── Toast ──────────────────────────────── */
+  .toast {
+    position: fixed;
+    bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: #1e293b;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    z-index: 999;
+    opacity: 0;
+    transition: .3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ── Teams panel (full-screen overlay) ── */
+  .teams-overlay {
+    display: none; position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 300;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .teams-overlay.open { display: flex; }
+  .tp-header {
+    background: var(--primary); color: #fff;
+    padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 301;
+  }
+  .tp-header h2 { font-size: 17px; font-weight: 600; }
+  .tp-close {
+    background: none; border: none; color: #fff;
+    font-size: 22px; cursor: pointer; padding: 4px;
+  }
+  .tp-section-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--muted);
+    padding: 16px 18px 6px;
+  }
+  .tp-team-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 6px 14px;
+    padding: 14px;
+    cursor: pointer;
+    transition: .1s;
+  }
+  .tp-team-card:active { border-color: var(--primary); }
+  .tp-team-card.active {
+    border-color: var(--primary);
+    background: var(--primary-light);
+  }
+  .tp-team-top {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 8px;
+  }
+  .tp-team-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+    background: var(--primary-light);
+  }
+  .tp-team-name { font-size: 15px; font-weight: 600; flex: 1; }
+  .tp-team-meta {
+    font-size: 12px; color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .tp-team-meta .tp-role-badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 8px;
+    font-weight: 600; display: inline-block;
+  }
+  .tp-team-desc {
+    font-size: 13px; color: var(--muted);
+    display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .tp-team-actions {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .tp-btn {
+    padding: 7px 14px;
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; transition: .15s;
+  }
+  .tp-btn:active { opacity: .8; }
+  .tp-btn-go {
+    background: var(--primary); color: #fff;
+  }
+  .tp-btn-edit {
+    background: transparent; color: var(--primary);
+    border: 1px solid var(--primary);
+  }
+  .tp-notif-row {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; color: var(--muted);
+    margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .tp-notif-row span { flex: 1; }
+  .tp-toggle {
+    width: 40px; height: 24px; background: #cbd5e1;
+    border-radius: 12px; position: relative; cursor: pointer;
+    transition: .2s; flex-shrink: 0;
+  }
+  .tp-toggle.on { background: var(--primary); }
+  .tp-toggle::after {
+    content: ''; position: absolute;
+    top: 2px; left: 2px; width: 20px; height: 20px;
+    background: #fff; border-radius: 50%; transition: .2s;
+  }
+  .tp-toggle.on::after { left: 18px; }
+  .tp-create-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin: 12px 14px;
+    padding: 14px;
+    border: 2px dashed var(--primary);
+    border-radius: var(--radius);
+    background: var(--primary-light);
+    color: var(--primary);
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+  }
+  .tp-create-btn:active { background: #bfdbfe; }
+  .tp-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding: 8px 0;
+  }
+  .tp-footer-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    font-size: 14px; cursor: pointer;
+    transition: .1s;
+  }
+  .tp-footer-item:active { background: var(--border); }
+  .tp-footer-item .tp-fi-icon { font-size: 18px; width: 24px; text-align: center; }
+
+  /* ── Notification popup ──────────────────── */
+  .notif-popup {
+    position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    max-width: 480px; width: 100%; z-index: 250;
+    padding: 10px 14px;
+    animation: slideDown .3s ease;
+  }
+  @keyframes slideDown {
+    from { transform: translate(-50%, -100%); }
+    to   { transform: translate(-50%, 0); }
+  }
+  .notif-card {
+    background: #fff; border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 20px rgba(0,0,0,.15);
+    padding: 14px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .notif-icon { font-size: 24px; flex-shrink: 0; }
+  .notif-body { flex: 1; }
+  .notif-title { font-size: 14px; font-weight: 600; }
+  .notif-text { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .notif-time { font-size: 11px; color: var(--muted); }
+  .notif-dismiss {
+    background: none; border: none; font-size: 18px;
+    color: var(--muted); cursor: pointer;
+  }
+
+  /* ── Team status panel ──────────────────── */
+  .shift-banner { cursor: pointer; }
+  .shift-banner .banner-chevron { font-size: 11px; opacity: .6; margin-left: 4px; }
+  .status-panel {
+    background: var(--card);
+    border-bottom: 2px solid var(--border);
+    max-height: 0; overflow: hidden;
+    transition: max-height .25s ease;
+  }
+  .status-panel.open { max-height: 400px; }
+  .status-panel-inner { padding: 10px 18px 14px; }
+  .status-panel h5 {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--muted); margin-bottom: 8px;
+  }
+  .status-member-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 0; border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .status-member-row:last-child { border-bottom: none; }
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .status-dot.active { background: #22c55e; }
+  .status-dot.inactive { background: #cbd5e1; }
+  .status-member-name { flex: 1; font-weight: 500; }
+  .status-member-time { font-size: 11px; color: var(--muted); }
+
+  /* ── End shift confirmation ─────────────── */
+  .confirm-section {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 14px;
+  }
+  .confirm-section h4 {
+    font-size: 13px; color: var(--danger); margin-bottom: 4px;
+  }
+  .confirm-section p {
+    font-size: 12px; color: #991b1b;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header>
+  <div>
+    <h1 id="teamNameHeader">Cargando...</h1>
+    <div class="team-info" id="teamDescSnippet" onclick="openDescriptionModal()"></div>
+  </div>
+  <div class="header-right">
+    <div class="user-badge" id="userBadge">...</div>
+    <button class="gear-btn" onclick="openTeamsPanel()" aria-label="Menú">⚙️</button>
+  </div>
+</header>
+
+<!-- ═══ SHIFT BANNER ═══ -->
+<div class="shift-banner" id="shiftBanner" onclick="toggleStatusPanel()">
+  <span id="shiftLabel">🟢 Turno activo desde <b id="shiftTime">08:00</b></span><span class="banner-chevron" id="bannerChevron">▼</span>
+  <button class="shift-btn end" id="shiftBtn" onclick="event.stopPropagation(); toggleShift()">Terminar turno</button>
+</div>
+<div class="status-panel" id="statusPanel">
+  <div class="status-panel-inner">
+    <h5>Estado del equipo</h5>
+    <div id="statusMemberList">Cargando...</div>
+  </div>
+</div>
+
+<!-- ═══ PINNED NOTE (visible on all panels) ═══ -->
+<div class="pinned-note" id="pinnedNote">
+  <div class="pinned-head">
+    <h4>📌 Nota fijada</h4>
+    <button class="pinned-edit-btn" onclick="openPinnedEditor()">✏️ Editar</button>
+  </div>
+  <p id="pinnedText">Paciente durmió bien. Comió cena completa. Pendiente medicamento de las 8am (Metformina). Verificar presión arterial.</p>
+  <div class="pinned-meta" id="pinnedMeta">Lupe · 07:55</div>
+</div>
+
+<!-- ═══ TABS ═══ -->
+<div class="tabs">
+  <button class="tab active" data-tab="events">⚡ Registrar</button>
+  <button class="tab" data-tab="timeline">📋 Línea de tiempo</button>
+</div>
+
+<!-- ═══ PANEL: Quick Events ═══ -->
+<div class="panel active" id="events">
+  <div class="event-grid" id="eventGrid">
+    <!-- rendered by JS -->
+  </div>
+</div>
+
+<!-- ═══ PANEL: Timeline ═══ -->
+<div class="panel" id="timeline">
+  <div id="timelineList">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<!-- ═══ MODAL ═══ -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent">
+    <!-- filled dynamically -->
+  </div>
+</div>
+
+<!-- ═══ TEAMS PANEL (full-screen) ═══ -->
+<div class="teams-overlay" id="teamsPanel">
+  <div class="tp-header">
+    <h2>Mis equipos</h2>
+    <button class="tp-close" onclick="closeTeamsPanel()">✕</button>
+  </div>
+
+  <div id="teamsCardList" style="flex:1;overflow-y:auto;padding-bottom:10px"></div>
+
+  <div style="padding:0 14px 6px">
+    <div class="tp-create-btn" onclick="openCreateTeamModal()">＋ Crear nuevo equipo</div>
+    <div class="tp-create-btn" style="margin-top:6px;background:transparent;color:var(--primary);border-style:solid" onclick="openJoinTeamModal()">🔗 Unirse con código</div>
+  </div>
+
+  <div class="tp-footer">
+    <div class="tp-footer-item" onclick="window.location.href='profile.html'">
+      <span class="tp-fi-icon">👤</span> Mi perfil
+    </div>
+    <div class="tp-footer-item" onclick="doLogout()">
+      <span class="tp-fi-icon">🚪</span> <span style="color:var(--danger)">Cerrar sesión</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ NOTIFICATION POPUP (demo) ═══ -->
+<div class="notif-popup" id="notifPopup" style="display:none">
+  <div class="notif-card">
+    <span class="notif-icon">🔴</span>
+    <div class="notif-body">
+      <div class="notif-title">Fin de turno — Lupe</div>
+      <div class="notif-text">Lupe terminó su turno en Cuidado de Sandra</div>
+      <div class="notif-time" id="notifTime"></div>
+    </div>
+    <button class="notif-dismiss" onclick="dismissNotif()">✕</button>
+  </div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = '';
+
+// ── State ──
+let currentUser = null;
+let activeTeam = null;
+let teamsCache = [];
+let eventTypesCache = [];
+let shiftEventType = null;
+let shiftActive = false;
+let currentModal = null;
+let pinnedNoteText = '';
+
+const fmt = d => d.toTimeString().slice(0, 5);
+
+// ── XSS-safe helper ──
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Authenticated fetch ──
+async function apiFetch(path, opts = {}) {
+  return fetch(API_BASE + path, { credentials: 'include', ...opts });
+}
+
+// ── Init ──
+async function init() {
+  try {
+    const r = await apiFetch('/users/me');
+    if (!r.ok) { window.location.replace('login.html'); return; }
+    currentUser = await r.json();
+  } catch {
+    window.location.replace('login.html'); return;
+  }
+
+  document.getElementById('userBadge').textContent = (currentUser.name || '?').split(' ')[0];
+
+  const tr = await apiFetch('/teams');
+  if (!tr.ok) { showToast('Error cargando equipos'); return; }
+  teamsCache = await tr.json();
+
+  if (!teamsCache.length) {
+    showNoTeamsState(); return;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const paramId = params.get('team_id');
+  const storedId = paramId || localStorage.getItem('activeTeamId');
+  activeTeam = teamsCache.find(t => t.id === storedId) || teamsCache[0];
+  localStorage.setItem('activeTeamId', activeTeam.id);
+
+  updateHeader();
+  await loadEventTypes();
+  await loadTimeline();
+  await loadNotices();
+  renderTeamsPanel();
+}
+
+function showNoTeamsState() {
+  document.getElementById('teamNameHeader').textContent = 'Sin equipos';
+  document.getElementById('teamDescSnippet').textContent = '';
+  document.getElementById('eventGrid').innerHTML = `
+    <div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--muted);font-size:14px">
+      Sin equipos todavía.<br>Crea uno o únete con un código de invitación usando ⚙️
+    </div>`;
+  renderTeamsPanel();
+}
+
+function updateHeader() {
+  if (!activeTeam) return;
+  document.getElementById('teamNameHeader').textContent = activeTeam.name;
+  document.getElementById('teamDescSnippet').textContent = activeTeam.description || '';
+}
+
+// ── Event types ──
+async function loadEventTypes() {
+  const r = await apiFetch(`/teams/${activeTeam.id}/event-types`);
+  if (!r.ok) return;
+  eventTypesCache = await r.json();
+  shiftEventType = eventTypesCache.find(et => et.is_header && et.is_active !== 0) || null;
+  renderEventGrid();
+  if (!shiftEventType) {
+    document.getElementById('shiftBanner').style.display = 'none';
+  }
+}
+
+function renderEventGrid() {
+  const grid = document.getElementById('eventGrid');
+  const logTypes = eventTypesCache.filter(et => !et.is_header && et.is_active !== 0);
+  if (!logTypes.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--muted);font-size:13px">Sin tipos de evento. El administrador debe crearlos.</div>`;
+    return;
+  }
+  grid.innerHTML = logTypes.map(et => `
+    <button class="event-btn" onclick="openEventModal('${et.id}')">
+      <span class="icon">${et.icon || '📝'}</span>
+      ${escHtml(et.name)}
+    </button>
+  `).join('');
+}
+
+// ── Dynamic event modal ──
+function openEventModal(etId) {
+  currentModal = etId;
+  const et = eventTypesCache.find(x => x.id === etId);
+  if (!et) return;
+
+  const now = new Date();
+  const isoLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+  let fieldsHtml = '';
+  if (et.field_type === 'boolean') {
+    fieldsHtml = `
+      <div class="field-group">
+        <div class="toggle-row">
+          <div class="toggle on" id="etToggle" onclick="this.classList.toggle('on')"></div>
+          <span>${escHtml(et.name)}</span>
+        </div>
+      </div>`;
+  } else if (et.field_type === 'dropdown') {
+    const opts = safeParseJSON(et.options, []);
+    fieldsHtml = `
+      <div class="field-group">
+        <label>${escHtml(et.name)}</label>
+        <div class="radio-group">
+          ${opts.map((o, i) => `
+            <label class="radio-pill">
+              <input type="radio" name="etOption" value="${escHtml(o)}" ${i === 0 ? 'checked' : ''}>
+              <span>${escHtml(o)}</span>
+            </label>`).join('')}
+        </div>
+      </div>`;
+  } else if (et.field_type === 'multi_select') {
+    const opts = safeParseJSON(et.options, []);
+    fieldsHtml = `
+      <div class="field-group">
+        <label>${escHtml(et.name)}</label>
+        <div class="checkbox-group">
+          ${opts.map(o => `
+            <label class="check-item">
+              <input type="checkbox" value="${escHtml(o)}"> ${escHtml(o)}
+            </label>`).join('')}
+        </div>
+      </div>`;
+  } else if (et.field_type === 'numeric') {
+    fieldsHtml = `
+      <div class="field-group">
+        <label>${escHtml(et.name)}</label>
+        <input type="number" id="etNumeric" value="0" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:16px;font-family:inherit">
+      </div>`;
+  } else if (et.field_type === 'text') {
+    fieldsHtml = `
+      <div class="field-group">
+        <label>${escHtml(et.name)}</label>
+        <textarea id="etText" rows="3" placeholder="Escribe aquí..."></textarea>
+      </div>`;
+  }
+  // timestamp_event: no extra field beyond timestamp
+
+  document.getElementById('modalContent').innerHTML = `
+    <h3>${escHtml(et.icon || '📝')} ${escHtml(et.name)}
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </h3>
+    <div class="field-group">
+      <label>Hora del evento</label>
+      <input type="datetime-local" id="eventTime" value="${isoLocal}">
+    </div>
+    ${fieldsHtml}
+    <div class="field-group">
+      <label>Comentario (opcional)</label>
+      <textarea id="eventComment" placeholder="Agregar nota..."></textarea>
+    </div>
+    <button class="btn-save" onclick="saveEvent('${etId}')">Guardar</button>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function getEventValue(et) {
+  if (et.field_type === 'boolean') {
+    return document.getElementById('etToggle')?.classList.contains('on') ? 'true' : 'false';
+  } else if (et.field_type === 'dropdown') {
+    return document.querySelector('input[name="etOption"]:checked')?.value || '';
+  } else if (et.field_type === 'multi_select') {
+    return [...document.querySelectorAll('.checkbox-group input:checked')].map(c => c.value).join(', ');
+  } else if (et.field_type === 'numeric') {
+    return document.getElementById('etNumeric')?.value || '0';
+  } else if (et.field_type === 'text') {
+    return document.getElementById('etText')?.value || '';
+  }
+  return null;
+}
+
+async function saveEvent(etId) {
+  const et = eventTypesCache.find(x => x.id === etId);
+  if (!et) return;
+
+  const rawTime = document.getElementById('eventTime')?.value || '';
+  const timestamp = rawTime ? rawTime + ':00' : new Date().toISOString().slice(0, 19);
+  const noteVal = document.getElementById('eventComment')?.value.trim() || null;
+  const eventValue = getEventValue(et);
+
+  const btn = document.querySelector('#modalContent .btn-save');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+  try {
+    const r = await apiFetch('/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        team_id: activeTeam.id,
+        event_type_id: etId,
+        event_value: eventValue || null,
+        timestamp,
+        note: noteVal
+      })
+    });
+    if (!r.ok) throw new Error();
+    closeModal();
+    showToast(`✅ ${et.name} registrado`);
+    await loadTimeline();
+  } catch {
+    showToast('❌ Error al guardar evento');
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+  }
+}
+
+// ── Timeline ──
+async function loadTimeline() {
+  if (!activeTeam) return;
+  const r = await apiFetch(`/events?team_id=${activeTeam.id}&limit=50`);
+  if (!r.ok) return;
+  const events = await r.json();
+  renderTimeline(events);
+
+  // Detect MY shift status (isolated to the current user)
+  if (shiftEventType && currentUser) {
+    try {
+      const sr = await apiFetch(`/events?team_id=${activeTeam.id}&caregiver_id=${currentUser.id}&limit=10`);
+      if (sr.ok) {
+        const myEvents = await sr.json();
+        const myShiftEvents = myEvents.filter(e => e.event_type_id === shiftEventType.id);
+        if (myShiftEvents.length > 0) {
+          const last = myShiftEvents[0];
+          shiftActive = last.event_value !== 'end';
+          updateShiftUI(shiftActive ? last.timestamp : null);
+        } else {
+          shiftActive = false;
+          updateShiftUI(null);
+        }
+      }
+    } catch { /* keep current state */ }
+  }
+}
+
+function renderTimeline(events) {
+  const list = document.getElementById('timelineList');
+  if (!events.length) {
+    list.innerHTML = '<p style="text-align:center;color:var(--muted);padding:24px;font-size:13px;">Sin eventos registrados aún.</p>';
+    return;
+  }
+  list.innerHTML = events.map(e => {
+    const timeStr = (e.timestamp || '').slice(11, 16);
+    return `
+      <div class="timeline-item">
+        <div class="tl-icon" style="background:${e.color || '#f1f5f9'}">${e.icon || '📝'}</div>
+        <div class="tl-body">
+          <div class="tl-head">
+            <span class="tl-type">${escHtml(e.event_type_name)}</span>
+            <span class="tl-time">${escHtml(timeStr)}</span>
+          </div>
+          ${e.event_value ? `<div class="tl-detail">${escHtml(e.event_value)}</div>` : ''}
+          <div class="tl-user">${escHtml(e.caregiver_name)}</div>
+          ${e.note ? `<div class="tl-note">"${escHtml(e.note)}"</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Shift ──
+function updateShiftUI(startTimestamp) {
+  if (!shiftEventType) return;
+  const banner = document.getElementById('shiftBanner');
+  const btn = document.getElementById('shiftBtn');
+  const label = document.getElementById('shiftLabel');
+  banner.style.display = '';
+  if (shiftActive && startTimestamp) {
+    const t = startTimestamp.slice(11, 16);
+    banner.classList.remove('off');
+    btn.className = 'shift-btn end';
+    btn.textContent = 'Terminar turno';
+    label.innerHTML = `🟢 Turno activo desde <b>${t}</b>`;
+  } else {
+    banner.classList.add('off');
+    btn.className = 'shift-btn start';
+    btn.textContent = 'Iniciar turno';
+    label.innerHTML = '⏸️ Sin turno activo';
+  }
+}
+
+function toggleShift() {
+  if (!shiftEventType) { showToast('Sin tipo de turno configurado'); return; }
+  if (shiftActive) {
+    openEndShiftModal();
+  } else {
+    startShift();
+  }
+}
+
+async function startShift() {
+  const now = new Date();
+  const ts = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 19);
+  try {
+    const r = await apiFetch('/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ team_id: activeTeam.id, event_type_id: shiftEventType.id, event_value: 'start', timestamp: ts, note: null })
+    });
+    if (!r.ok) throw new Error();
+    shiftActive = true;
+    updateShiftUI(ts);
+    showToast('🟢 Turno iniciado');
+    await loadTimeline();
+  } catch {
+    showToast('❌ Error al iniciar turno');
+  }
+}
+
+function openEndShiftModal() {
+  currentModal = '__endshift__';
+  document.getElementById('modalContent').innerHTML = `
+    <h3>🔴 Terminar turno <button class="modal-close" onclick="closeModal()">✕</button></h3>
+    <div class="confirm-section">
+      <h4>¿Estás segura que deseas terminar tu turno?</h4>
+      <p>Se registrará como evento en la línea de tiempo.</p>
+    </div>
+    <button class="btn-save" style="background:var(--danger)" onclick="confirmEndShift()">Confirmar fin de turno</button>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+async function confirmEndShift() {
+  const now = new Date();
+  const ts = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 19);
+  try {
+    const r = await apiFetch('/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ team_id: activeTeam.id, event_type_id: shiftEventType.id, event_value: 'end', timestamp: ts, note: null })
+    });
+    if (!r.ok) throw new Error();
+    shiftActive = false;
+    updateShiftUI(null);
+    closeModal();
+    showToast('🔴 Turno terminado');
+    await loadTimeline();
+  } catch {
+    showToast('❌ Error al terminar turno');
+  }
+}
+
+// ── Team status panel ──
+let statusPanelOpen = false;
+
+function toggleStatusPanel() {
+  statusPanelOpen = !statusPanelOpen;
+  document.getElementById('statusPanel').classList.toggle('open', statusPanelOpen);
+  document.getElementById('bannerChevron').textContent = statusPanelOpen ? '▲' : '▼';
+  if (statusPanelOpen) loadStatusPanel();
+}
+
+async function loadStatusPanel() {
+  if (!activeTeam) return;
+  const listEl = document.getElementById('statusMemberList');
+  listEl.textContent = 'Cargando...';
+  try {
+    const membersRes = await apiFetch(`/teams/${activeTeam.id}/members`);
+    if (!membersRes.ok) throw new Error('members');
+    const members = await membersRes.json();
+
+    if (!members.length) {
+      listEl.textContent = 'Sin miembros en el equipo.';
+      return;
+    }
+
+    // Load shift events only if a shift event type is configured
+    const lastStatus = {};
+    if (shiftEventType) {
+      const eventsRes = await apiFetch(`/events?team_id=${activeTeam.id}&limit=200`);
+      if (eventsRes.ok) {
+        const events = await eventsRes.json();
+        for (const e of events) {
+          if (e.event_type_id !== shiftEventType.id) continue;
+          if (!lastStatus[e.caregiver_id]) lastStatus[e.caregiver_id] = e;
+        }
+      }
+    }
+
+    // Build rows: active first, then inactive, then no-data
+    const rows = members.map(m => {
+      const last = lastStatus[m.id];
+      const active = last && last.event_value !== 'end';
+      const timeStr = last ? (last.timestamp || '').slice(11, 16) : null;
+      return { name: m.name, active, timeStr, hasData: !!last };
+    });
+    rows.sort((a, b) => b.active - a.active || b.hasData - a.hasData);
+
+    listEl.innerHTML = rows.map(r => `
+      <div class="status-member-row">
+        <div class="status-dot ${r.active ? 'active' : 'inactive'}"></div>
+        <span class="status-member-name">${escHtml(r.name)}</span>
+        <span class="status-member-time">${r.active ? '🟢 desde ' + (r.timeStr || '?') : r.timeStr ? '🔴 hasta ' + r.timeStr : 'Sin actividad'}</span>
+      </div>
+    `).join('');
+  } catch {
+    listEl.textContent = 'Error cargando estado del equipo.';
+  }
+}
+
+// ── Pinned note ──
+async function loadNotices() {
+  if (!activeTeam) return;
+  const r = await apiFetch(`/teams/${activeTeam.id}/notices`);
+  if (!r.ok) return;
+  const data = await r.json();
+  pinnedNoteText = data.team_notices || '';
+  renderPinned();
+}
+
+function renderPinned() {
+  const textEl = document.getElementById('pinnedText');
+  const metaEl = document.getElementById('pinnedMeta');
+  if (pinnedNoteText) {
+    textEl.textContent = pinnedNoteText;
+    textEl.style.color = '';
+    textEl.style.fontStyle = '';
+    metaEl.textContent = '';
+  } else {
+    textEl.textContent = 'Sin nota fijada. Toca "Editar" para agregar una.';
+    textEl.style.color = 'var(--muted)';
+    textEl.style.fontStyle = 'italic';
+    metaEl.textContent = '';
+  }
+}
+
+function openPinnedEditor() {
+  currentModal = '__pinned__';
+  document.getElementById('modalContent').innerHTML = `
+    <h3>📌 Editar nota fijada <button class="modal-close" onclick="closeModal()">✕</button></h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Nota visible para todo el equipo.</p>
+    <div class="field-group">
+      <textarea id="pinnedInput" rows="5" style="min-height:120px">${escHtml(pinnedNoteText)}</textarea>
+    </div>
+    <button class="btn-save" onclick="savePinnedNote()">Guardar nota</button>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+async function savePinnedNote() {
+  const newText = document.getElementById('pinnedInput')?.value.trim() || '';
+  const btn = document.querySelector('#modalContent .btn-save');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+  try {
+    const r = await apiFetch(`/teams/${activeTeam.id}/notices`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ team_notices: newText })
+    });
+    if (!r.ok) throw new Error();
+    pinnedNoteText = newText;
+    renderPinned();
+    closeModal();
+    showToast('📌 Nota fijada actualizada');
+  } catch {
+    showToast('❌ Error al guardar nota');
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar nota'; }
+  }
+}
+
+// ── Teams panel ──
+function renderTeamsPanel() {
+  const container = document.getElementById('teamsCardList');
+  if (!teamsCache.length) {
+    container.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Sin equipos. Crea uno o únete con un código de invitación.</div>`;
+    return;
+  }
+  const activeId = activeTeam?.id;
+  const active = teamsCache.find(t => t.id === activeId);
+  const others = teamsCache.filter(t => t.id !== activeId);
+  let html = '';
+  if (active) {
+    html += `<div class="tp-section-title">Equipo activo</div>${buildTeamCard(active, true)}`;
+  }
+  if (others.length) {
+    html += `<div class="tp-section-title">Otros equipos</div>${others.map(t => buildTeamCard(t, false)).join('')}`;
+  }
+  container.innerHTML = html;
+}
+
+function buildTeamCard(team, isActive) {
+  const roleStyles = {
+    admin: 'background:#ede9fe;color:#7c3aed',
+    contributor: 'background:#dbeafe;color:#2563eb',
+    viewer: 'background:#f1f5f9;color:#64748b'
+  };
+  const roleLabels = { admin: 'Editor', contributor: 'Contribuidor', viewer: 'Visor' };
+  const roleLabel = roleLabels[team.my_role] || team.my_role;
+  const roleStyle = roleStyles[team.my_role] || '';
+  const canAdmin = team.my_role === 'admin';
+  return `
+    <div class="tp-team-card ${isActive ? 'active' : ''}">
+      <div class="tp-team-top">
+        <div class="tp-team-icon">👥</div>
+        <div class="tp-team-name">${escHtml(team.name)}</div>
+      </div>
+      <div class="tp-team-meta">
+        <span class="tp-role-badge" style="${roleStyle}">${roleLabel}</span>
+      </div>
+      ${team.description ? `<div class="tp-team-desc">${escHtml(team.description)}</div>` : ''}
+      <div class="tp-team-actions">
+        ${isActive
+          ? `<button class="tp-btn tp-btn-go" onclick="closeTeamsPanel();showToast('Ya estás en este equipo')">Ir al equipo</button>`
+          : `<button class="tp-btn tp-btn-go" onclick="switchTeam('${team.id}')">Ir al equipo</button>`}
+        ${canAdmin ? `<button class="tp-btn tp-btn-edit" onclick="window.location.href='admin.html?team_id=${team.id}'">Editar</button>` : ''}
+      </div>
+    </div>`;
+}
+
+async function switchTeam(teamId) {
+  localStorage.setItem('activeTeamId', teamId);
+  closeTeamsPanel();
+  window.location.reload();
+}
+
+// ── Create / Join team modals ──
+function openCreateTeamModal() {
+  currentModal = '__createteam__';
+  closeTeamsPanel();
+  document.getElementById('modalContent').innerHTML = `
+    <h3>➕ Crear equipo <button class="modal-close" onclick="closeModal()">✕</button></h3>
+    <div class="field-group">
+      <label>Nombre del equipo</label>
+      <input type="text" id="newTeamName" placeholder="Ej: Cuidado de Sandra">
+    </div>
+    <div class="field-group">
+      <label>Descripción / contexto del paciente (opcional)</label>
+      <textarea id="newTeamDesc" rows="3" placeholder="Ej: Paciente femenina, 72 años, diabetes..."></textarea>
+    </div>
+    <button class="btn-save" onclick="doCreateTeam()">Crear equipo</button>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+async function doCreateTeam() {
+  const name = document.getElementById('newTeamName').value.trim();
+  const desc = document.getElementById('newTeamDesc').value.trim();
+  if (!name) { showToast('⚠️ Ingresa el nombre del equipo'); return; }
+  const btn = document.querySelector('#modalContent .btn-save');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creando...'; }
+  try {
+    const r = await apiFetch('/teams', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description: desc || null })
+    });
+    if (!r.ok) throw new Error();
+    const team = await r.json();
+    localStorage.setItem('activeTeamId', team.id);
+    closeModal();
+    showToast('✅ Equipo creado');
+    window.location.reload();
+  } catch {
+    showToast('❌ Error al crear equipo');
+    if (btn) { btn.disabled = false; btn.textContent = 'Crear equipo'; }
+  }
+}
+
+function openJoinTeamModal() {
+  currentModal = '__jointeam__';
+  closeTeamsPanel();
+  document.getElementById('modalContent').innerHTML = `
+    <h3>🔗 Unirse a equipo <button class="modal-close" onclick="closeModal()">✕</button></h3>
+    <div class="field-group">
+      <label>Código de invitación</label>
+      <input type="text" id="inviteCodeInput" placeholder="XXXXXXXX" maxlength="8"
+        style="font-size:22px;letter-spacing:5px;text-align:center;text-transform:uppercase;font-weight:700">
+    </div>
+    <button class="btn-save" onclick="doJoinTeam()">Unirse</button>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('inviteCodeInput').addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+  });
+}
+
+async function doJoinTeam() {
+  const code = document.getElementById('inviteCodeInput').value.trim().toUpperCase();
+  if (!code) { showToast('⚠️ Ingresa el código'); return; }
+  const btn = document.querySelector('#modalContent .btn-save');
+  if (btn) { btn.disabled = true; btn.textContent = 'Uniéndose...'; }
+  try {
+    const r = await apiFetch(`/teams/join/${code}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.detail || 'Código inválido');
+    }
+    const data = await r.json();
+    localStorage.setItem('activeTeamId', data.team_id);
+    closeModal();
+    showToast(`✅ Te uniste a ${data.team_name}`);
+    window.location.reload();
+  } catch (e) {
+    showToast(`❌ ${e.message}`);
+    if (btn) { btn.disabled = false; btn.textContent = 'Unirse'; }
+  }
+}
+
+// ── Description modal ──
+function openDescriptionModal() {
+  currentModal = '__desc__';
+  const desc = activeTeam?.description || 'Sin descripción.';
+  document.getElementById('modalContent').innerHTML = `
+    <h3>ℹ️ Sobre el equipo <button class="modal-close" onclick="closeModal()">✕</button></h3>
+    <div class="desc-modal-body">${escHtml(desc)}</div>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+// ── Modal helpers ──
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  currentModal = null;
+}
+
+// ── Teams panel helpers ──
+function openTeamsPanel() {
+  renderTeamsPanel();
+  document.getElementById('teamsPanel').classList.add('open');
+}
+function closeTeamsPanel() {
+  document.getElementById('teamsPanel').classList.remove('open');
+}
+
+// ── Logout ──
+async function doLogout() {
+  await apiFetch('/auth/logout', { method: 'POST' }).catch(() => {});
+  window.location.replace('login.html');
+}
+
+// ── Tabs ──
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ── JSON helper ──
+function safeParseJSON(s, fallback) {
+  try { return JSON.parse(s); } catch { return fallback; }
+}
+
+// ── Notification popup dismiss (kept for future use) ──
+function dismissNotif() {
+  document.getElementById('notifPopup').style.display = 'none';
+}
+
+init();
+</script>
+</body>
+</html>
