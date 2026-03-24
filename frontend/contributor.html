@@ -460,6 +460,10 @@
     background: transparent; color: var(--primary);
     border: 1px solid var(--primary);
   }
+  .tp-btn-edit.tp-btn-locked {
+    color: var(--muted); border-color: var(--border);
+    cursor: default; opacity: .55;
+  }
   .tp-notif-row {
     display: flex; align-items: center; gap: 10px;
     font-size: 12px; color: var(--muted);
@@ -593,9 +597,9 @@
 </header>
 
 <!-- ═══ SHIFT BANNER ═══ -->
-<div class="shift-banner" id="shiftBanner" onclick="toggleStatusPanel()">
-  <span id="shiftLabel">🟢 Turno activo desde <b id="shiftTime">08:00</b></span><span class="banner-chevron" id="bannerChevron">▼</span>
-  <button class="shift-btn end" id="shiftBtn" onclick="event.stopPropagation(); toggleShift()">Terminar turno</button>
+<div class="shift-banner" id="shiftBanner" onclick="toggleStatusPanel()" style="display:none">
+  <span id="shiftLabel"></span><span class="banner-chevron" id="bannerChevron">▼</span>
+  <button class="shift-btn start" id="shiftBtn" onclick="event.stopPropagation(); toggleShift()">Iniciar turno</button>
 </div>
 <div class="status-panel" id="statusPanel">
   <div class="status-panel-inner">
@@ -610,7 +614,7 @@
     <h4>📌 Nota fijada</h4>
     <button class="pinned-edit-btn" onclick="openPinnedEditor()">✏️ Editar</button>
   </div>
-  <p id="pinnedText">Paciente durmió bien. Comió cena completa. Pendiente medicamento de las 8am (Metformina). Verificar presión arterial.</p>
+  <p id="pinnedText"></p>
   <div class="pinned-meta" id="pinnedMeta">Lupe · 07:55</div>
 </div>
 
@@ -652,7 +656,6 @@
 
   <div style="padding:0 14px 6px">
     <div class="tp-create-btn" onclick="openCreateTeamModal()">＋ Crear nuevo equipo</div>
-    <div class="tp-create-btn" style="margin-top:6px;background:transparent;color:var(--primary);border-style:solid" onclick="openJoinTeamModal()">🔗 Unirse con código</div>
   </div>
 
   <div class="tp-footer">
@@ -762,9 +765,7 @@ async function loadEventTypes() {
   eventTypesCache = await r.json();
   shiftEventType = eventTypesCache.find(et => et.is_header && et.is_active !== 0) || null;
   renderEventGrid();
-  if (!shiftEventType) {
-    document.getElementById('shiftBanner').style.display = 'none';
-  }
+  document.getElementById('shiftBanner').style.display = shiftEventType ? '' : 'none';
 }
 
 function renderEventGrid() {
@@ -849,10 +850,11 @@ function openEventModal(etId) {
       <input type="datetime-local" id="eventTime" value="${isoLocal}">
     </div>
     ${fieldsHtml}
+    ${et.field_type !== 'text' ? `
     <div class="field-group">
       <label>Comentario (opcional)</label>
       <textarea id="eventComment" placeholder="Agregar nota..."></textarea>
-    </div>
+    </div>` : ''}
     <button class="btn-save" onclick="saveEvent('${etId}')">Guardar</button>
   `;
   document.getElementById('modalOverlay').classList.add('open');
@@ -1203,7 +1205,9 @@ function buildTeamCard(team, isActive) {
         ${isActive
           ? `<button class="tp-btn tp-btn-go" onclick="closeTeamsPanel();showToast('Ya estás en este equipo')">Ir al equipo</button>`
           : `<button class="tp-btn tp-btn-go" onclick="switchTeam('${team.id}')">Ir al equipo</button>`}
-        ${canAdmin ? `<button class="tp-btn tp-btn-edit" onclick="window.location.href='admin.html?team_id=${team.id}'">Editar</button>` : ''}
+        ${canAdmin
+          ? `<button class="tp-btn tp-btn-edit" onclick="window.location.href='admin.html?team_id=${team.id}'">Editar</button>`
+          : `<button class="tp-btn tp-btn-edit tp-btn-locked" onclick="showToast('Solo los administradores pueden hacer cambios. Pide a un administrador que cambie tu nivel de acceso', 4000)">Editar</button>`}
       </div>
     </div>`;
 }
@@ -1257,49 +1261,6 @@ async function doCreateTeam() {
   }
 }
 
-function openJoinTeamModal() {
-  currentModal = '__jointeam__';
-  closeTeamsPanel();
-  document.getElementById('modalContent').innerHTML = `
-    <h3>🔗 Unirse a equipo <button class="modal-close" onclick="closeModal()">✕</button></h3>
-    <div class="field-group">
-      <label>Código de invitación</label>
-      <input type="text" id="inviteCodeInput" placeholder="XXXXXXXX" maxlength="8"
-        style="font-size:22px;letter-spacing:5px;text-align:center;text-transform:uppercase;font-weight:700">
-    </div>
-    <button class="btn-save" onclick="doJoinTeam()">Unirse</button>
-  `;
-  document.getElementById('modalOverlay').classList.add('open');
-  document.getElementById('inviteCodeInput').addEventListener('input', function() {
-    this.value = this.value.toUpperCase();
-  });
-}
-
-async function doJoinTeam() {
-  const code = document.getElementById('inviteCodeInput').value.trim().toUpperCase();
-  if (!code) { showToast('⚠️ Ingresa el código'); return; }
-  const btn = document.querySelector('#modalContent .btn-save');
-  if (btn) { btn.disabled = true; btn.textContent = 'Uniéndose...'; }
-  try {
-    const r = await apiFetch(`/teams/join/${code}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    if (!r.ok) {
-      const d = await r.json().catch(() => ({}));
-      throw new Error(d.detail || 'Código inválido');
-    }
-    const data = await r.json();
-    localStorage.setItem('activeTeamId', data.team_id);
-    closeModal();
-    showToast(`✅ Te uniste a ${data.team_name}`);
-    window.location.reload();
-  } catch (e) {
-    showToast(`❌ ${e.message}`);
-    if (btn) { btn.disabled = false; btn.textContent = 'Unirse'; }
-  }
-}
-
 // ── Description modal ──
 function openDescriptionModal() {
   currentModal = '__desc__';
@@ -1343,11 +1304,11 @@ document.querySelectorAll('.tab').forEach(t => {
 });
 
 // ── Toast ──
-function showToast(msg) {
+function showToast(msg, duration) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2000);
+  setTimeout(() => t.classList.remove('show'), duration || 2000);
 }
 
 // ── JSON helper ──

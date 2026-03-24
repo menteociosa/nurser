@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
+from typing import Optional
 
 from database import get_db
 from auth_utils import (
@@ -13,11 +14,13 @@ router = APIRouter()
 class RegisterRequest(BaseModel):
     name: str
     phone: str
+    invite_code: Optional[str] = None
 
 
 class VerifyOtpRequest(BaseModel):
     phone: str
     otp: str
+    invite_code: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -108,6 +111,27 @@ def verify_otp(body: VerifyOtpRequest, response: Response):
             "UPDATE users SET phone_verified = 1, otp_code = NULL, otp_expires_at = NULL WHERE id = ?",
             (user["id"],),
         )
+
+        # Auto-join team if invite_code was provided
+        if body.invite_code:
+            invite = db.execute(
+                "SELECT * FROM invite_codes WHERE code = ?", (body.invite_code,)
+            ).fetchone()
+            if invite and (not invite["max_uses"] or invite["use_count"] < invite["max_uses"]):
+                existing_membership = db.execute(
+                    "SELECT id FROM team_memberships WHERE team_id = ? AND user_id = ?",
+                    (invite["team_id"], user["id"]),
+                ).fetchone()
+                if not existing_membership:
+                    db.execute(
+                        "INSERT INTO team_memberships (id, team_id, user_id, role) VALUES (?, ?, ?, ?)",
+                        (new_id(), invite["team_id"], user["id"], invite["role"]),
+                    )
+                    db.execute(
+                        "UPDATE invite_codes SET use_count = use_count + 1 WHERE id = ?",
+                        (invite["id"],),
+                    )
+
         db.commit()
 
         token = create_jwt(user["id"])

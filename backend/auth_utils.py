@@ -65,7 +65,7 @@ def get_current_user_id(request: Request) -> str:
             raise HTTPException(status_code=401, detail=f"DEV_AUTOLOGIN_PHONE '{dev_phone}' not found in DB")
         return row["id"]
     ### end block for autologin in development on Windows
-    
+
     token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -92,9 +92,14 @@ def is_otp_expired(expires_at: str) -> bool:
 
 def send_otp(phone: str, otp: str):
     """Send OTP via BulkSMS. Falls back to printing to console if using placeholder keys."""
+    send_sms(phone, f"Tu clave de acceso a Nurser es: {otp}")
+
+
+def send_sms(phone: str, body_text: str):
+    """Send an SMS via BulkSMS. Falls back to printing to console if using placeholder keys."""
     if BULKSMS_USERNAME == "placeholder":
         print(f"\n{'='*50}")
-        print(f"  SMS OTP for {phone}: {otp}")
+        print(f"  SMS to {phone}: {body_text}")
         print(f"{'='*50}\n")
         return
 
@@ -108,7 +113,7 @@ def send_otp(phone: str, otp: str):
         "https://api.bulksms.com/v1/messages",
         json={
             "to": [phone],
-            "body": f"Tu clave de acceso a Nurser es: {otp}",
+            "body": body_text,
             "encoding": "UNICODE",
         },
         headers={

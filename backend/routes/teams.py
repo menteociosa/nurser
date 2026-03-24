@@ -1,3 +1,4 @@
+import os
 import json
 from datetime import datetime, timezone
 from typing import Optional
@@ -6,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Request, Query
 from pydantic import BaseModel
 
 from database import get_db
-from auth_utils import get_current_user_id, new_id, generate_invite_code
+from auth_utils import get_current_user_id, new_id, generate_invite_code, send_sms
 
 router = APIRouter()
 
@@ -29,6 +30,7 @@ class UpdateMemberRoleRequest(BaseModel):
 
 
 class InviteRequest(BaseModel):
+    phone: str
     role: Optional[str] = "contributor"
 
 
@@ -248,15 +250,87 @@ def create_invite(team_id: str, body: InviteRequest, request: Request):
     db = get_db()
     try:
         require_team_admin(db, team_id, user_id)
+        team = db.execute("SELECT name FROM teams WHERE id = ?", (team_id,)).fetchone()
+        if not team:
+            raise HTTPException(status_code=404, detail="Team not found")
+
         code = generate_invite_code()
         invite_id = new_id()
         db.execute(
-            """INSERT INTO invite_codes (id, team_id, code, created_by, role)
-               VALUES (?, ?, ?, ?, ?)""",
-            (invite_id, team_id, code, user_id, body.role or "contributor"),
+            """INSERT INTO invite_codes (id, team_id, code, created_by, invited_phone, role)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (invite_id, team_id, code, user_id, body.phone, body.role or "contributor"),
         )
         db.commit()
-        return {"code": code, "invite_id": invite_id}
+
+        domain = os.getenv("app_domain", "app.nurser.xyz").strip()
+        invite_link = f"https://{domain}/invite.html?code={code}"
+        send_sms(
+            body.phone,
+            f"Te invitaron al grupo \"{team['name']}\" en Nurser. "
+            f"Entra aqui para unirte: {invite_link}",
+        )
+        return {"code": code, "invite_id": invite_id, "phone": body.phone, "link": invite_link}
+    finally:
+        db.close()
+
+
+@router.get("/{team_id}/invites")
+def list_pending_invites(team_id: str, request: Request):
+    """Return unexpired, unused invites for a team."""
+    user_id = get_current_user_id(request)
+    db = get_db()
+    try:
+        require_team_admin(db, team_id, user_id)
+        domain = os.getenv("app_domain", "app.nurser.xyz").strip()
+        rows = db.execute(
+            """SELECT code, invited_phone, role, created_at
+               FROM invite_codes
+               WHERE team_id = ?
+                 AND (max_uses IS NULL OR use_count < max_uses)
+                 AND (expires_at IS NULL OR expires_at > NOW())
+               ORDER BY created_at DESC""",
+            (team_id,),
+        ).fetchall()
+        result = []
+        for r in rows:
+            d = dict(r)
+            d["link"] = f"https://{domain}/invite.html?code={d['code']}"
+            result.append(d)
+        return result
+    finally:
+        db.close()
+
+
+@router.get("/invite-info/{invite_code}")
+def get_invite_info(invite_code: str):
+    """Public endpoint (no auth). Returns invite details for the landing page."""
+    db = get_db()
+    try:
+        invite = db.execute(
+            "SELECT ic.*, t.name AS team_name FROM invite_codes ic "
+            "JOIN teams t ON ic.team_id = t.id WHERE ic.code = ?",
+            (invite_code,),
+        ).fetchone()
+        if not invite:
+            raise HTTPException(status_code=404, detail="Invitación no encontrada")
+        if invite["max_uses"] and invite["use_count"] >= invite["max_uses"]:
+            raise HTTPException(status_code=400, detail="Invitación ya fue usada")
+
+        phone = invite["invited_phone"] or ""
+        user_exists = False
+        if phone:
+            row = db.execute("SELECT id FROM users WHERE phone = ?", (phone,)).fetchone()
+            user_exists = row is not None
+
+        return {
+            "code": invite["code"],
+            "team_name": invite["team_name"],
+            "team_id": invite["team_id"],
+            "invited_phone": phone,
+            "user_exists": user_exists,
+            "role": invite["role"],
+        }
     finally:
         db.close()
 
@@ -277,6 +351,12 @@ def join_team(invite_code: str, request: Request):
 
         if invite["expires_at"] and datetime.now(timezone.utc).isoformat() > invite["expires_at"]:
             raise HTTPException(status_code=400, detail="Invite code has expired")
+
+        # Verify the logged-in user's phone matches the invited phone
+        if invite["invited_phone"]:
+            user = db.execute("SELECT phone FROM users WHERE id = ?", (user_id,)).fetchone()
+            if user and user["phone"] != invite["invited_phone"]:
+                raise HTTPException(status_code=403, detail="Esta invitación es para otro número")
 
         existing = db.execute(
             "SELECT id FROM team_memberships WHERE team_id = ? AND user_id = ?",

@@ -241,6 +241,11 @@
     font-size: 14px; font-weight: 600; cursor: pointer;
     white-space: nowrap;
   }
+  .pending-invites-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .pending-invites-table th { text-align:left; color:var(--muted); font-weight:600; padding:6px 4px; border-bottom:1px solid var(--border); }
+  .pending-invites-table td { padding:6px 4px; border-bottom:1px solid var(--border); word-break:break-all; }
+  .pending-invites-table td a { color:var(--primary); text-decoration:none; }
+  .pending-invites-table td a:hover { text-decoration:underline; }
 
   /* ── Toast ───────────────────────────── */
   .toast {
@@ -536,6 +541,10 @@
   <p class="section-title">Invitar nuevo miembro</p>
   <div class="card" id="inviteCard">
     <div class="form-group" style="margin-bottom:8px">
+      <label>Número de teléfono del invitado</label>
+      <input type="tel" id="invitePhone" placeholder="+52 55 1234 5678" inputmode="tel">
+    </div>
+    <div class="form-group" style="margin-bottom:8px">
       <label>Rol para el nuevo miembro</label>
       <select id="inviteRole">
         <option value="contributor">Contribuidor</option>
@@ -543,12 +552,13 @@
         <option value="viewer">Visor</option>
       </select>
     </div>
-    <div class="invite-row">
-      <input type="text" id="inviteCodeDisplay" placeholder="Código generado aquí" readonly
-        style="letter-spacing:3px;font-size:16px;font-weight:600;text-transform:uppercase">
-      <button onclick="generateInviteCode()">Generar</button>
-    </div>
-    <p style="font-size:12px;color:var(--muted);margin-top:8px">Comparte este código para que el miembro se una al equipo.</p>
+    <button class="btn-primary" onclick="sendInvite()" style="width:100%">Enviar invitación por SMS</button>
+    <p style="font-size:12px;color:var(--muted);margin-top:8px">Se enviará un enlace por SMS para que se una al equipo.</p>
+  </div>
+
+  <p class="section-title">Invitaciones pendientes</p>
+  <div class="card" id="pendingInvitesCard">
+    <div id="pendingInvitesList"><p style="color:var(--muted);font-size:13px">Cargando…</p></div>
   </div>
 </div>
 
@@ -703,7 +713,7 @@ async function init() {
   teamId = params.get('team_id') || localStorage.getItem('activeTeamId');
   if (!teamId) { window.location.replace('contributor.html'); return; }
 
-  await Promise.all([loadTeam(), loadEventTypes(), loadMembers()]);
+  await Promise.all([loadTeam(), loadEventTypes(), loadMembers(), loadPendingInvites()]);
 
   // Populate support phone
   document.getElementById('supportPhone').value = currentUser.phone || '';
@@ -837,11 +847,9 @@ function renderEventModal(et, isNew) {
       <label>Tipo de campo</label>
       <select id="etFieldType" onchange="updateAdminOptionsSection()">
         <option value="text"             ${fieldType==='text'?'selected':''}>📝 Texto libre</option>
-        <option value="boolean"          ${fieldType==='boolean'?'selected':''}>✅ Sí / No</option>
         <option value="numeric"          ${fieldType==='numeric'?'selected':''}>🔢 Número</option>
         <option value="dropdown"         ${fieldType==='dropdown'?'selected':''}>🔘 Seleccionar uno</option>
         <option value="multi_select"     ${fieldType==='multi_select'?'selected':''}>☑️ Seleccionar varios</option>
-        <option value="timestamp_event"  ${fieldType==='timestamp_event'?'selected':''}>⏱️ Evento de tiempo</option>
       </select>
     </div>
     <div id="adminOptionsSection" style="${['dropdown','multi_select'].includes(fieldType)?'':'display:none'}">
@@ -998,21 +1006,49 @@ async function removeMember(userId, name) {
   }
 }
 
-// ── Invite code ──
-async function generateInviteCode() {
+// ── Invite by phone ──
+async function sendInvite() {
+  const phone = document.getElementById('invitePhone').value.trim();
   const role = document.getElementById('inviteRole').value;
+  if (!phone) { showToast('⚠️ Ingresa un número de teléfono'); return; }
   try {
     const r = await apiFetch(`/teams/${teamId}/invite`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role })
+      body: JSON.stringify({ phone, role })
     });
-    if (!r.ok) throw new Error();
-    const data = await r.json();
-    document.getElementById('inviteCodeDisplay').value = data.code;
-    showToast('✅ Código generado — compártelo');
-  } catch {
-    showToast('❌ Error al generar código');
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.detail || 'Error');
+    }
+    document.getElementById('invitePhone').value = '';
+    showToast('✅ Invitación enviada por SMS');
+    loadPendingInvites();
+  } catch (e) {
+    showToast(`❌ ${e.message}`);
+  }
+}
+
+// ── Pending invites ──
+async function loadPendingInvites() {
+  const container = document.getElementById('pendingInvitesList');
+  if (!container) return;
+  try {
+    const r = await apiFetch(`/teams/${teamId}/invites`);
+    if (!r.ok) throw new Error('fetch failed');
+    const invites = await r.json();
+    if (!invites.length) {
+      container.innerHTML = '<p style="color:var(--muted);font-size:13px">No hay invitaciones pendientes.</p>';
+      return;
+    }
+    let html = '<table class="pending-invites-table"><thead><tr><th>Teléfono</th><th>Link</th></tr></thead><tbody>';
+    for (const inv of invites) {
+      html += `<tr><td>${inv.invited_phone}</td><td><a href="${inv.link}" target="_blank">${inv.link}</a></td></tr>`;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = '<p style="color:var(--muted);font-size:13px">Error al cargar invitaciones.</p>';
   }
 }
 

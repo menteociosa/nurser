@@ -107,6 +107,7 @@ def init_db():
             team_id TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
             code TEXT UNIQUE NOT NULL,
             created_by TEXT NOT NULL REFERENCES users(id),
+            invited_phone TEXT,
             role TEXT NOT NULL DEFAULT 'contributor' CHECK(role IN ('admin','contributor','viewer')),
             max_uses INTEGER DEFAULT 1,
             use_count INTEGER NOT NULL DEFAULT 0,
@@ -118,6 +119,11 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_team_memberships_user ON team_memberships(user_id)",
         "CREATE INDEX IF NOT EXISTS idx_team_memberships_team ON team_memberships(team_id)",
         "CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code)",
+        # Migration: add invited_phone if missing (safe to re-run)
+        """DO $$ BEGIN
+            ALTER TABLE invite_codes ADD COLUMN invited_phone TEXT;
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$""",
     ]
 
     for stmt in statements:

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Nurser — Invitación</title>
+<style>
+  :root {
+    --bg: #f5f5f5; --card: #ffffff; --primary: #2563eb;
+    --primary-light: #dbeafe; --danger: #ef4444;
+    --text: #1e293b; --muted: #64748b;
+    --border: #e2e8f0; --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    max-width: 480px; margin: 0 auto; min-height: 100dvh;
+    display: flex; flex-direction: column;
+  }
+  .brand {
+    background: var(--primary); color: #fff;
+    padding: 36px 24px 28px; text-align: center;
+  }
+  .brand-icon { font-size: 44px; margin-bottom: 8px; }
+  .brand h1 { font-size: 26px; font-weight: 700; letter-spacing: -.5px; }
+  .brand p { font-size: 14px; opacity: .8; margin-top: 4px; }
+
+  .invite-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    margin: 20px;
+    padding: 24px;
+    text-align: center;
+  }
+  .invite-card h2 {
+    font-size: 18px; margin-bottom: 8px;
+  }
+  .invite-card .team-name {
+    font-size: 22px; font-weight: 700; color: var(--primary);
+    margin-bottom: 16px;
+  }
+  .invite-card .invite-msg {
+    font-size: 14px; color: var(--muted); line-height: 1.5;
+    margin-bottom: 20px;
+  }
+  .form-group { margin-bottom: 16px; text-align: left; }
+  .form-group label {
+    display: block; font-size: 13px; font-weight: 600;
+    color: var(--muted); margin-bottom: 6px;
+  }
+  .form-group input {
+    width: 100%; padding: 12px 14px;
+    border: 2px solid var(--border); border-radius: var(--radius);
+    font-size: 15px; font-family: inherit; transition: .15s;
+  }
+  .form-group input:focus { outline: none; border-color: var(--primary); }
+  .btn-primary {
+    width: 100%; padding: 14px; background: var(--primary); color: #fff;
+    border: none; border-radius: var(--radius);
+    font-size: 16px; font-weight: 600; cursor: pointer;
+  }
+  .btn-primary:active { opacity: .85; }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-reject {
+    width: 100%; padding: 12px; background: none;
+    border: 2px solid var(--border); border-radius: var(--radius);
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    color: var(--muted); margin-top: 10px;
+  }
+
+  .otp-input { display: flex; gap: 10px; justify-content: center; margin-bottom: 24px; }
+  .otp-box {
+    width: 46px; height: 54px; border: 2px solid var(--border);
+    border-radius: 10px; font-size: 22px; font-weight: 700;
+    text-align: center; font-family: inherit; transition: .15s;
+  }
+  .otp-box:focus { outline: none; border-color: var(--primary); }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .error-card {
+    background: #fef2f2; border: 1px solid #fecaca;
+    border-radius: var(--radius); margin: 20px;
+    padding: 24px; text-align: center;
+    color: #991b1b; font-size: 15px;
+  }
+
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: #1e293b; color: #fff; padding: 10px 22px;
+    border-radius: 24px; font-size: 14px; z-index: 999;
+    opacity: 0; transition: .3s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="brand">
+  <div class="brand-icon">🏥</div>
+  <h1>Nurser</h1>
+  <p>Registro de cuidado en equipo</p>
+</div>
+
+<!-- Loading -->
+<div class="screen active" id="loadingScreen">
+  <div class="invite-card">
+    <p>Cargando invitación...</p>
+  </div>
+</div>
+
+<!-- Error -->
+<div class="screen" id="errorScreen">
+  <div class="error-card" id="errorMsg">Invitación no válida</div>
+</div>
+
+<!-- Screen A: Already logged in — accept/reject -->
+<div class="screen" id="acceptScreen">
+  <div class="invite-card">
+    <h2>📩 Invitación</h2>
+    <div class="team-name" id="acceptTeamName"></div>
+    <p class="invite-msg">Te han invitado a unirte a este grupo.</p>
+    <button class="btn-primary" onclick="doAccept()">Aceptar invitación</button>
+    <button class="btn-reject" onclick="doReject()">No, gracias</button>
+  </div>
+</div>
+
+<!-- Screen B: New user — register + auto-join -->
+<div class="screen" id="registerScreen">
+  <div class="invite-card">
+    <h2>📩 Invitación</h2>
+    <div class="team-name" id="regTeamName"></div>
+    <p class="invite-msg" id="regInviteMsg">
+      Has sido invitado al grupo. Para unirte, valida tu teléfono.<br>
+      Escribe tu nombre y presiona el botón para recibir un código por texto.
+    </p>
+    <div class="form-group">
+      <label>Tu nombre</label>
+      <input type="text" id="regName" placeholder="María López" autocomplete="name">
+    </div>
+    <div class="form-group">
+      <label>Tu teléfono</label>
+      <input type="tel" id="regPhone" readonly style="background:#f1f5f9">
+    </div>
+    <button class="btn-primary" id="regBtn" onclick="doInviteRegister()">Enviar código por SMS</button>
+  </div>
+</div>
+
+<!-- Screen B2: OTP verification for new user -->
+<div class="screen" id="otpScreen">
+  <div class="invite-card">
+    <h2>📱 Ingresa el código</h2>
+    <p class="invite-msg">Enviamos un código de 6 dígitos a <b id="otpPhoneDisplay"></b></p>
+    <div class="otp-input">
+      <input type="tel" maxlength="1" class="otp-box" id="otp0" inputmode="numeric">
+      <input type="tel" maxlength="1" class="otp-box" id="otp1" inputmode="numeric">
+      <input type="tel" maxlength="1" class="otp-box" id="otp2" inputmode="numeric">
+      <input type="tel" maxlength="1" class="otp-box" id="otp3" inputmode="numeric">
+      <input type="tel" maxlength="1" class="otp-box" id="otp4" inputmode="numeric">
+      <input type="tel" maxlength="1" class="otp-box" id="otp5" inputmode="numeric">
+    </div>
+    <button class="btn-primary" id="verifyBtn" onclick="doInviteVerify()">Verificar y unirse</button>
+  </div>
+</div>
+
+<!-- Screen: Already logged in but already a member -->
+<div class="screen" id="alreadyMemberScreen">
+  <div class="invite-card">
+    <h2>✅ Ya eres miembro</h2>
+    <div class="team-name" id="alreadyTeamName"></div>
+    <p class="invite-msg">Ya formas parte de este grupo.</p>
+    <button class="btn-primary" onclick="window.location.href='contributor.html'">Ir al grupo</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = '';
+const params = new URLSearchParams(window.location.search);
+const inviteCode = params.get('code');
+
+let inviteInfo = null;
+let currentUser = null;
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function init() {
+  if (!inviteCode) {
+    document.getElementById('errorMsg').textContent = 'Enlace de invitación inválido (falta el código).';
+    showScreen('errorScreen');
+    return;
+  }
+
+  // 1. Fetch invite info (public, no auth needed)
+  try {
+    const r = await fetch(API_BASE + `/teams/invite-info/${encodeURIComponent(inviteCode)}`);
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      document.getElementById('errorMsg').textContent = d.detail || 'Invitación no válida o expirada.';
+      showScreen('errorScreen');
+      return;
+    }
+    inviteInfo = await r.json();
+  } catch {
+    document.getElementById('errorMsg').textContent = 'Error de conexión.';
+    showScreen('errorScreen');
+    return;
+  }
+
+  // 2. Check if current user is logged in
+  try {
+    const r = await fetch(API_BASE + '/users/me', { credentials: 'include' });
+    if (r.ok) currentUser = await r.json();
+  } catch { /* not logged in */ }
+
+  if (currentUser) {
+    // Already logged in — show accept/reject
+    document.getElementById('acceptTeamName').textContent = inviteInfo.team_name;
+    showScreen('acceptScreen');
+  } else if (inviteInfo.user_exists) {
+    // Phone is registered but not logged in — send them to login with a redirect back
+    // First send OTP automatically
+    try {
+      const r = await fetch(API_BASE + '/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: inviteInfo.invited_phone })
+      });
+      if (r.ok) {
+        // Show OTP screen
+        document.getElementById('otpPhoneDisplay').textContent = inviteInfo.invited_phone;
+        showScreen('otpScreen');
+        setTimeout(() => document.getElementById('otp0').focus(), 50);
+      } else {
+        document.getElementById('errorMsg').textContent = 'Error al enviar código. Intenta iniciar sesión normalmente.';
+        showScreen('errorScreen');
+      }
+    } catch {
+      document.getElementById('errorMsg').textContent = 'Error de conexión.';
+      showScreen('errorScreen');
+    }
+  } else {
+    // New user — show register form
+    document.getElementById('regTeamName').textContent = inviteInfo.team_name;
+    document.getElementById('regInviteMsg').innerHTML =
+      `Has sido invitado al grupo <b>${escHtml(inviteInfo.team_name)}</b>. Para unirte, valida tu teléfono.<br>` +
+      `Escribe tu nombre y presiona el botón para recibir un código por texto.`;
+    document.getElementById('regPhone').value = inviteInfo.invited_phone;
+    showScreen('registerScreen');
+  }
+}
+
+// ── Screen A: Accept (logged in user) ──
+async function doAccept() {
+  try {
+    const r = await fetch(API_BASE + `/teams/join/${encodeURIComponent(inviteCode)}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      if (d.detail === 'Already a member of this team') {
+        document.getElementById('alreadyTeamName').textContent = inviteInfo.team_name;
+        showScreen('alreadyMemberScreen');
+        return;
+      }
+      showToast(d.detail || 'Error al unirse');
+      return;
+    }
+    const data = await r.json();
+    localStorage.setItem('activeTeamId', data.team_id);
+    window.location.replace('contributor.html?team_id=' + data.team_id);
+  } catch {
+    showToast('Error de conexión');
+  }
+}
+
+function doReject() {
+  window.location.replace('contributor.html');
+}
+
+// ── Screen B: Register new user ──
+async function doInviteRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const phone = document.getElementById('regPhone').value.trim();
+  if (!name) { showToast('Ingresa tu nombre'); return; }
+
+  const btn = document.getElementById('regBtn');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    const r = await fetch(API_BASE + '/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, invite_code: inviteCode })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) {
+      document.getElementById('otpPhoneDisplay').textContent = phone;
+      showScreen('otpScreen');
+      setTimeout(() => document.getElementById('otp0').focus(), 50);
+    } else if (r.status === 409) {
+      // User already exists — send login OTP instead
+      const lr = await fetch(API_BASE + '/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone })
+      });
+      if (lr.ok) {
+        document.getElementById('otpPhoneDisplay').textContent = phone;
+        showScreen('otpScreen');
+        setTimeout(() => document.getElementById('otp0').focus(), 50);
+      } else {
+        showToast('Error al enviar código');
+      }
+    } else {
+      showToast(d.detail || 'Error al registrarse');
+    }
+  } catch {
+    showToast('Error de conexión');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enviar código por SMS';
+  }
+}
+
+// ── OTP verification (works for both existing and new users) ──
+async function doInviteVerify() {
+  const otp = [0,1,2,3,4,5].map(i => document.getElementById(`otp${i}`).value).join('');
+  if (otp.length < 6) { showToast('Ingresa el código completo'); return; }
+
+  const phone = document.getElementById('otpPhoneDisplay').textContent;
+  const btn = document.getElementById('verifyBtn');
+  btn.disabled = true; btn.textContent = 'Verificando...';
+
+  try {
+    const r = await fetch(API_BASE + '/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ phone, otp, invite_code: inviteCode })
+    });
+    if (r.ok) {
+      // Verified + auto-joined via backend — redirect to team
+      localStorage.setItem('activeTeamId', inviteInfo.team_id);
+      window.location.replace('contributor.html?team_id=' + inviteInfo.team_id);
+    } else {
+      const d = await r.json().catch(() => ({}));
+      showToast(d.detail || 'Código incorrecto');
+      // Clear OTP boxes
+      for (let i = 0; i < 6; i++) {
+        const el = document.getElementById(`otp${i}`);
+        if (el) el.value = '';
+      }
+      document.getElementById('otp0').focus();
+    }
+  } catch {
+    showToast('Error de conexión');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Verificar y unirse';
+  }
+}
+
+// ── OTP box navigation ──
+document.querySelectorAll('.otp-box').forEach((input, i) => {
+  input.addEventListener('input', () => {
+    const v = input.value.replace(/\D/g, '');
+    input.value = v.slice(0, 1);
+    if (v && i < 5) document.getElementById(`otp${i + 1}`).focus();
+    if (v && i === 5) doInviteVerify();
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Backspace' && !input.value && i > 0)
+      document.getElementById(`otp${i - 1}`).focus();
+  });
+  input.addEventListener('paste', e => {
+    e.preventDefault();
+    const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+    [...paste.slice(0, 6)].forEach((ch, j) => {
+      const el = document.getElementById(`otp${j}`);
+      if (el) el.value = ch;
+    });
+    if (paste.length >= 6) setTimeout(doInviteVerify, 100);
+  });
+});
+
+init();
+</script>
+</body>
+</html>
