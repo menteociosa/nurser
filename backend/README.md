@@ -1,63 +1,47 @@
-# Nurser Backend — Quick Start & Deployment
+# postgress
+sudo apt update
+sudo apt upgrade
+sudo apt install postgresql postgresql-contrib
 
-## Local Development (Windows)
+### Allow Remote Connections
+Edit postgresql.conf:Find the file (usually in /etc/postgresql/16/main/) and locate listen_addresses.Bash
 
-```bash
-cd backend
-
-# Create virtual environment (first time only)
-py -m venv venv
-
-# Activate it
-.\venv\Scripts\Activate.ps1
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the server (auto-reload on file changes)
-python -m uvicorn main:app --reload --port 8001
-
-# Open the app  (always use this URL — do NOT open the HTML files directly from disk)
-# http://localhost:8001
-
-# Swagger docs
-# http://localhost:8001/docs
+Change:
+```
+# listen_addresses = 'localhost'
+# To:
+listen_addresses = '*'
 ```
 
-The OTP code prints to the terminal when `BULKSMS_USERNAME=placeholder`.
+Edit pg_hba.conf
+This file controls client authentication. Add a line at the end to allow your specific IP address or a range
+```
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+host    all             all             0.0.0.0/0               md5
+```
+
+### password 
+Before connecting remotely, ensure you have set a strong password for the default postgres user by opening the postgres prompt
+```sudo -u postgres psql``` 
+and typing ```\password postgres.```
+
+or
+```ALTER USER postgres WITH PASSWORD 'your_extremely_secure_password';```
+**Dont forget semicolns ; at the end**
+
+
+
+### update firewall
+sudo ufw allow 5432/tcp
+
+### restart and verify
+sudo systemctl restart postgresql
 
 ---
 
-## Deploy to Linux VPS
 
-### 1. Server prep
 
-```bash
-sudo apt update && sudo apt install -y python3 python3-venv python3-pip
-```
-
-### 2. Upload code
-
-```bash
-# From your local machine
-scp -r backend/ user@your-vps-ip:/opt/nurser/
-```
-
-### 3. Setup on VPS
-
-```bash
-cd /opt/nurser
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 4. Configure .env
-
-```bash
-nano .env
-```
-
+ ### create the .env
 Set real values:
 ```
 SECRET_KEY=generate-a-64-char-random-string

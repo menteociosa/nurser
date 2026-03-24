@@ -3,7 +3,7 @@ import random
 import string
 import uuid
 from datetime import datetime, timedelta, timezone
-
+import platform
 import bcrypt
 import jwt
 from dotenv import load_dotenv
@@ -49,8 +49,23 @@ def decode_jwt(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
+
+
 def get_current_user_id(request: Request) -> str:
-    """Extract user_id from the JWT stored in an HTTP-only cookie."""
+    ### start block for autologin in development on Windows (ignores JWT and cookies)
+    dev_phone = os.getenv("DEV_AUTOLOGIN_PHONE", "").strip()
+    if dev_phone and platform.system() == "Windows":
+        from database import get_db
+        db = get_db()
+        try:
+            row = db.execute("SELECT id FROM users WHERE phone = ?", (dev_phone,)).fetchone()
+        finally:
+            db.close()
+        if not row:
+            raise HTTPException(status_code=401, detail=f"DEV_AUTOLOGIN_PHONE '{dev_phone}' not found in DB")
+        return row["id"]
+    ### end block for autologin in development on Windows
+    
     token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
