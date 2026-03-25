@@ -4,107 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Nurser — Acceso</title>
-<style>
-  :root {
-    --bg: #f5f5f5; --card: #ffffff; --primary: #2563eb;
-    --danger: #ef4444; --text: #1e293b; --muted: #64748b;
-    --border: #e2e8f0; --radius: 12px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    background: var(--bg); color: var(--text);
-    max-width: 480px; margin: 0 auto; min-height: 100dvh;
-    display: flex; flex-direction: column;
-  }
-  .brand {
-    background: var(--primary); color: #fff;
-    padding: 36px 24px 28px; text-align: center;
-  }
-  .brand-icon { font-size: 44px; margin-bottom: 8px; }
-  .brand h1 { font-size: 26px; font-weight: 700; letter-spacing: -.5px; }
-  .brand p { font-size: 14px; opacity: .8; margin-top: 4px; }
-
-  .tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--border); }
-  .tab {
-    flex: 1; padding: 14px; text-align: center;
-    font-size: 14px; font-weight: 500; color: var(--muted);
-    background: none; border: none; cursor: pointer;
-    border-bottom: 2px solid transparent; transition: .15s;
-  }
-  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-
-  .form-panel { display: none; padding: 24px 20px; }
-  .form-panel.active { display: block; }
-
-  .form-group { margin-bottom: 16px; }
-  .form-group label {
-    display: block; font-size: 13px; font-weight: 600;
-    color: var(--muted); margin-bottom: 6px;
-  }
-  .form-group input {
-    width: 100%; padding: 12px 14px;
-    border: 2px solid var(--border); border-radius: var(--radius);
-    font-size: 15px; font-family: inherit; transition: .15s;
-  }
-  .form-group input:focus { outline: none; border-color: var(--primary); }
-
-  .form-hint {
-    font-size: 13px; color: var(--muted);
-    margin-top: -8px; margin-bottom: 16px; line-height: 1.4;
-  }
-
-  .btn-primary {
-    width: 100%; padding: 14px; background: var(--primary); color: #fff;
-    border: none; border-radius: var(--radius);
-    font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 4px;
-  }
-  .btn-primary:active { opacity: .85; }
-  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-
-  .sub-screen { display: none; padding: 24px 20px; }
-  .sub-screen.active { display: block; }
-
-  .screen-header { text-align: center; margin-bottom: 28px; }
-  .screen-header h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-  .screen-header p { font-size: 14px; color: var(--muted); line-height: 1.5; }
-  .screen-header b { color: var(--text); }
-
-  .otp-input { display: flex; gap: 10px; justify-content: center; margin-bottom: 24px; }
-  .otp-box {
-    width: 46px; height: 54px; border: 2px solid var(--border);
-    border-radius: 10px; font-size: 22px; font-weight: 700;
-    text-align: center; font-family: inherit; transition: .15s;
-  }
-  .otp-box:focus { outline: none; border-color: var(--primary); }
-
-  .resend-row { text-align: center; font-size: 13px; color: var(--muted); margin-top: 14px; }
-  .resend-row a { color: var(--primary); cursor: pointer; font-weight: 600; }
-
-  .edit-phone-row { text-align: center; font-size: 13px; color: var(--muted); margin-top: 8px; }
-  .edit-phone-row a { color: var(--primary); cursor: pointer; font-weight: 500; }
-
-  .toast {
-    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-    background: #1e293b; color: #fff; padding: 10px 22px;
-    border-radius: 24px; font-size: 14px; z-index: 999;
-    opacity: 0; transition: .3s; pointer-events: none;
-    white-space: nowrap; max-width: 90vw;
-  }
-  .toast.show { opacity: 1; }
-  .toast.err { background: var(--danger); }
-</style>
+<link rel="stylesheet" href="nurser.css">
 </head>
 <body>
 
 <div class="brand">
-  <div class="brand-icon">🏥</div>
+  <span class="brand-icon">🏥</span>
   <h1>Nurser</h1>
   <p>Registro de cuidado en equipo</p>
 </div>
 
 <div id="authScreen">
-  <div class="tabs">
+  <div class="tabs" style="position:static;top:auto;box-shadow:none;">
     <button class="tab active" id="tabLogin" onclick="switchTab('login')">Iniciar sesión</button>
     <button class="tab" id="tabRegister" onclick="switchTab('register')">Registrarse</button>
   </div>
@@ -157,7 +68,7 @@
 <script>
 const API_BASE = '';
 let otpPhone   = '';
-let otpContext = 'login'; // 'login' | 'register'
+let otpContext = 'login';
 
 (async () => {
   try {
@@ -176,7 +87,6 @@ function switchTab(tab) {
 async function doLogin() {
   const phone = document.getElementById('loginPhone').value.trim();
   if (!phone) { showToast('Ingresa tu número', true); return; }
-
   const btn = document.getElementById('loginBtn');
   btn.disabled = true; btn.textContent = 'Enviando...';
   try {
@@ -191,10 +101,7 @@ async function doLogin() {
       showOtpScreen();
     } else if (r.status === 404) {
       showToast('Número no encontrado. ¿Primera vez? Regístrate.', true);
-      setTimeout(() => {
-        switchTab('register');
-        document.getElementById('regPhone').value = phone;
-      }, 1800);
+      setTimeout(() => { switchTab('register'); document.getElementById('regPhone').value = phone; }, 1800);
     } else {
       showToast(d.detail || 'Error al enviar código', true);
     }
@@ -209,7 +116,6 @@ async function doRegister() {
   const name  = document.getElementById('regName').value.trim();
   const phone = document.getElementById('regPhone').value.trim();
   if (!name || !phone) { showToast('Completa nombre y teléfono', true); return; }
-
   const btn = document.getElementById('registerBtn');
   btn.disabled = true; btn.textContent = 'Enviando...';
   try {
@@ -224,10 +130,7 @@ async function doRegister() {
       showOtpScreen();
     } else if (r.status === 409) {
       showToast('Número ya registrado — inicia sesión', true);
-      setTimeout(() => {
-        switchTab('login');
-        document.getElementById('loginPhone').value = phone;
-      }, 1500);
+      setTimeout(() => { switchTab('login'); document.getElementById('loginPhone').value = phone; }, 1500);
     } else {
       showToast(d.detail || 'Error al registrarse', true);
     }
@@ -294,7 +197,6 @@ document.querySelectorAll('.otp-box').forEach((input, i) => {
 async function doVerify() {
   const otp = [0,1,2,3,4,5].map(i => document.getElementById(`otp${i}`).value).join('');
   if (otp.length < 6) { showToast('Ingresa el código completo'); return; }
-
   const btn = document.getElementById('verifyBtn');
   btn.disabled = true; btn.textContent = 'Verificando...';
   try {

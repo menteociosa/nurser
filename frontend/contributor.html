@@ -4,583 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Nurser — Contribuidor</title>
-<style>
-  :root {
-    --bg: #f5f5f5;
-    --card: #ffffff;
-    --primary: #2563eb;
-    --primary-light: #dbeafe;
-    --danger: #ef4444;
-    --success: #22c55e;
-    --text: #1e293b;
-    --muted: #64748b;
-    --border: #e2e8f0;
-    --radius: 12px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    max-width: 480px;
-    margin: 0 auto;
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ── Header ────────────────────────────── */
-  header {
-    background: var(--primary);
-    color: #fff;
-    padding: 14px 18px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  header h1 { font-size: 17px; font-weight: 600; }
-  header .team-info {
-    font-size: 12px; opacity: .85;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    max-width: 240px;
-    cursor: pointer;
-  }
-  header .team-info::after {
-    content: ' ℹ️';
-    font-size: 10px;
-  }
-  .header-right {
-    display: flex; align-items: center; gap: 10px;
-  }
-  .user-badge {
-    background: rgba(255,255,255,.2);
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 13px;
-  }
-  .gear-btn {
-    background: none; border: none; color: #fff;
-    font-size: 20px; cursor: pointer; padding: 4px;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  /* ── Shift banner ──────────────────────── */
-  .shift-banner {
-    background: #ecfdf5;
-    border-bottom: 1px solid #bbf7d0;
-    padding: 10px 18px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 13px;
-    color: #166534;
-  }
-  .shift-banner.off {
-    background: #fef9c3;
-    border-color: #fde68a;
-    color: #92400e;
-  }
-  .shift-btn {
-    padding: 6px 14px;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .shift-btn.start { background: var(--success); color: #fff; }
-  .shift-btn.end   { background: var(--danger); color: #fff; }
-
-  /* ── Tabs ───────────────────────────────── */
-  .tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    background: var(--card);
-    position: sticky;
-    top: 53px;
-    z-index: 90;
-  }
-  .tab {
-    flex: 1;
-    padding: 12px 0;
-    text-align: center;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--muted);
-    background: none;
-    border: none;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: .15s;
-  }
-  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-
-  /* ── Panels ─────────────────────────────── */
-  .panel { display: none; flex: 1; overflow-y: auto; padding: 14px; }
-  .panel.active { display: block; }
-
-  /* ── Quick Event Buttons ────────────────── */
-  .event-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  .event-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 20px 10px;
-    background: var(--card);
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: .15s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .event-btn:active {
-    border-color: var(--primary);
-    background: var(--primary-light);
-    transform: scale(.97);
-  }
-  .event-btn .icon { font-size: 28px; }
-
-  /* ── Modal ──────────────────────────────── */
-  .modal-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,.4);
-    z-index: 200;
-    align-items: flex-end;
-    justify-content: center;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal {
-    background: var(--card);
-    width: 100%;
-    max-width: 480px;
-    border-radius: 16px 16px 0 0;
-    padding: 20px;
-    max-height: 85dvh;
-    overflow-y: auto;
-    animation: slideUp .2s ease;
-  }
-  @keyframes slideUp {
-    from { transform: translateY(40px); opacity: 0; }
-    to   { transform: translateY(0); opacity: 1; }
-  }
-  .modal h3 {
-    font-size: 17px;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .modal-close {
-    margin-left: auto;
-    background: none;
-    border: none;
-    font-size: 22px;
-    cursor: pointer;
-    color: var(--muted);
-  }
-
-  /* ── Form elements ──────────────────────── */
-  .field-group { margin-bottom: 16px; }
-  .field-group label {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-  .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
-  .radio-pill input { display: none; }
-  .radio-pill span {
-    display: inline-block;
-    padding: 8px 16px;
-    border: 2px solid var(--border);
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: .15s;
-  }
-  .radio-pill input:checked + span {
-    border-color: var(--primary);
-    background: var(--primary-light);
-    color: var(--primary);
-    font-weight: 600;
-  }
-  .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
-  .check-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 8px 12px;
-    background: var(--bg);
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-  }
-  .check-item input[type="checkbox"] {
-    width: 20px; height: 20px;
-    accent-color: var(--primary);
-  }
-  input[type="text"], input[type="datetime-local"], textarea {
-    width: 100%;
-    padding: 10px 12px;
-    border: 2px solid var(--border);
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: inherit;
-    transition: .15s;
-  }
-  input:focus, textarea:focus {
-    outline: none;
-    border-color: var(--primary);
-  }
-  textarea { resize: vertical; min-height: 60px; }
-  .slider-row {
-    display: flex; align-items: center; gap: 12px;
-  }
-  .slider-row input[type="range"] {
-    flex: 1;
-    accent-color: var(--primary);
-    height: 28px;
-  }
-  .slider-val {
-    min-width: 36px;
-    text-align: center;
-    font-weight: 700;
-    font-size: 18px;
-    color: var(--primary);
-  }
-  .toggle-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 8px 0;
-  }
-  .toggle {
-    width: 48px; height: 28px;
-    background: #cbd5e1;
-    border-radius: 14px;
-    position: relative;
-    cursor: pointer;
-    transition: .2s;
-    flex-shrink: 0;
-  }
-  .toggle.on { background: var(--primary); }
-  .toggle::after {
-    content: '';
-    position: absolute;
-    top: 3px; left: 3px;
-    width: 22px; height: 22px;
-    background: #fff;
-    border-radius: 50%;
-    transition: .2s;
-  }
-  .toggle.on::after { left: 23px; }
-  .btn-save {
-    width: 100%;
-    padding: 14px;
-    background: var(--primary);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius);
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 8px;
-  }
-  .btn-save:active { opacity: .85; }
-
-  /* ── Timeline ───────────────────────────── */
-  .timeline-item {
-    display: flex;
-    gap: 12px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .tl-icon {
-    width: 40px; height: 40px;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px;
-    flex-shrink: 0;
-  }
-  .tl-body { flex: 1; }
-  .tl-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 2px;
-  }
-  .tl-type { font-weight: 600; font-size: 14px; }
-  .tl-time { font-size: 12px; color: var(--muted); }
-  .tl-detail { font-size: 13px; color: var(--muted); }
-  .tl-user { font-size: 12px; color: var(--primary); margin-top: 2px; }
-  .tl-note {
-    margin-top: 4px;
-    font-size: 12px;
-    font-style: italic;
-    color: #78716c;
-    background: #fafaf9;
-    padding: 4px 8px;
-    border-radius: 6px;
-  }
-
-  /* ── Pinned note ─────────────────────────── */
-  .pinned-note {
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    border-radius: var(--radius);
-    padding: 14px;
-    margin: 14px;
-    margin-bottom: 0;
-  }
-  .pinned-head {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 6px;
-  }
-  .pinned-head h4 { font-size: 13px; color: var(--primary); margin: 0; }
-  .pinned-edit-btn {
-    background: none; border: 1px solid var(--primary);
-    color: var(--primary); font-size: 12px; font-weight: 600;
-    padding: 3px 10px; border-radius: 8px; cursor: pointer;
-  }
-  .pinned-edit-btn:active { background: var(--primary-light); }
-  .pinned-note p { font-size: 13px; }
-  .pinned-note .pinned-meta {
-    font-size: 11px; color: var(--muted); margin-top: 6px;
-  }
-
-  /* ── Description modal ──────────────────── */
-  .desc-modal-body {
-    font-size: 14px; line-height: 1.5;
-    white-space: pre-wrap;
-  }
-
-  /* ── Toast ──────────────────────────────── */
-  .toast {
-    position: fixed;
-    bottom: 30px; left: 50%; transform: translateX(-50%);
-    background: #1e293b;
-    color: #fff;
-    padding: 10px 20px;
-    border-radius: 24px;
-    font-size: 14px;
-    z-index: 999;
-    opacity: 0;
-    transition: .3s;
-    pointer-events: none;
-  }
-  .toast.show { opacity: 1; }
-
-  /* ── Teams panel (full-screen overlay) ── */
-  .teams-overlay {
-    display: none; position: fixed; inset: 0;
-    background: var(--bg);
-    z-index: 300;
-    flex-direction: column;
-    overflow-y: auto;
-  }
-  .teams-overlay.open { display: flex; }
-  .tp-header {
-    background: var(--primary); color: #fff;
-    padding: 14px 18px;
-    display: flex; align-items: center; justify-content: space-between;
-    position: sticky; top: 0; z-index: 301;
-  }
-  .tp-header h2 { font-size: 17px; font-weight: 600; }
-  .tp-close {
-    background: none; border: none; color: #fff;
-    font-size: 22px; cursor: pointer; padding: 4px;
-  }
-  .tp-section-title {
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .5px; color: var(--muted);
-    padding: 16px 18px 6px;
-  }
-  .tp-team-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    margin: 6px 14px;
-    padding: 14px;
-    cursor: pointer;
-    transition: .1s;
-  }
-  .tp-team-card:active { border-color: var(--primary); }
-  .tp-team-card.active {
-    border-color: var(--primary);
-    background: var(--primary-light);
-  }
-  .tp-team-top {
-    display: flex; align-items: center; gap: 12px;
-    margin-bottom: 8px;
-  }
-  .tp-team-icon {
-    width: 44px; height: 44px; border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; flex-shrink: 0;
-    background: var(--primary-light);
-  }
-  .tp-team-name { font-size: 15px; font-weight: 600; flex: 1; }
-  .tp-team-meta {
-    font-size: 12px; color: var(--muted);
-    margin-bottom: 10px;
-  }
-  .tp-team-meta .tp-role-badge {
-    font-size: 11px; padding: 2px 8px; border-radius: 8px;
-    font-weight: 600; display: inline-block;
-  }
-  .tp-team-desc {
-    font-size: 13px; color: var(--muted);
-    display: -webkit-box; -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical; overflow: hidden;
-    margin-bottom: 10px;
-  }
-  .tp-team-actions {
-    display: flex; gap: 8px; align-items: center;
-  }
-  .tp-btn {
-    padding: 7px 14px;
-    border-radius: 8px; font-size: 13px; font-weight: 600;
-    cursor: pointer; border: none; transition: .15s;
-  }
-  .tp-btn:active { opacity: .8; }
-  .tp-btn-go {
-    background: var(--primary); color: #fff;
-  }
-  .tp-btn-edit {
-    background: transparent; color: var(--primary);
-    border: 1px solid var(--primary);
-  }
-  .tp-btn-edit.tp-btn-locked {
-    color: var(--muted); border-color: var(--border);
-    cursor: default; opacity: .55;
-  }
-  .tp-notif-row {
-    display: flex; align-items: center; gap: 10px;
-    font-size: 12px; color: var(--muted);
-    margin-top: 8px; padding-top: 8px;
-    border-top: 1px solid var(--border);
-  }
-  .tp-notif-row span { flex: 1; }
-  .tp-toggle {
-    width: 40px; height: 24px; background: #cbd5e1;
-    border-radius: 12px; position: relative; cursor: pointer;
-    transition: .2s; flex-shrink: 0;
-  }
-  .tp-toggle.on { background: var(--primary); }
-  .tp-toggle::after {
-    content: ''; position: absolute;
-    top: 2px; left: 2px; width: 20px; height: 20px;
-    background: #fff; border-radius: 50%; transition: .2s;
-  }
-  .tp-toggle.on::after { left: 18px; }
-  .tp-create-btn {
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    margin: 12px 14px;
-    padding: 14px;
-    border: 2px dashed var(--primary);
-    border-radius: var(--radius);
-    background: var(--primary-light);
-    color: var(--primary);
-    font-size: 14px; font-weight: 600;
-    cursor: pointer;
-  }
-  .tp-create-btn:active { background: #bfdbfe; }
-  .tp-footer {
-    margin-top: auto;
-    border-top: 1px solid var(--border);
-    padding: 8px 0;
-  }
-  .tp-footer-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 14px 18px;
-    font-size: 14px; cursor: pointer;
-    transition: .1s;
-  }
-  .tp-footer-item:active { background: var(--border); }
-  .tp-footer-item .tp-fi-icon { font-size: 18px; width: 24px; text-align: center; }
-
-  /* ── Notification popup ──────────────────── */
-  .notif-popup {
-    position: fixed; top: 0; left: 50%; transform: translateX(-50%);
-    max-width: 480px; width: 100%; z-index: 250;
-    padding: 10px 14px;
-    animation: slideDown .3s ease;
-  }
-  @keyframes slideDown {
-    from { transform: translate(-50%, -100%); }
-    to   { transform: translate(-50%, 0); }
-  }
-  .notif-card {
-    background: #fff; border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: 0 4px 20px rgba(0,0,0,.15);
-    padding: 14px;
-    display: flex; gap: 12px; align-items: flex-start;
-  }
-  .notif-icon { font-size: 24px; flex-shrink: 0; }
-  .notif-body { flex: 1; }
-  .notif-title { font-size: 14px; font-weight: 600; }
-  .notif-text { font-size: 13px; color: var(--muted); margin-top: 2px; }
-  .notif-time { font-size: 11px; color: var(--muted); }
-  .notif-dismiss {
-    background: none; border: none; font-size: 18px;
-    color: var(--muted); cursor: pointer;
-  }
-
-  /* ── Team status panel ──────────────────── */
-  .shift-banner { cursor: pointer; }
-  .shift-banner .banner-chevron { font-size: 11px; opacity: .6; margin-left: 4px; }
-  .status-panel {
-    background: var(--card);
-    border-bottom: 2px solid var(--border);
-    max-height: 0; overflow: hidden;
-    transition: max-height .25s ease;
-  }
-  .status-panel.open { max-height: 400px; }
-  .status-panel-inner { padding: 10px 18px 14px; }
-  .status-panel h5 {
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .5px; color: var(--muted); margin-bottom: 8px;
-  }
-  .status-member-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 6px 0; border-bottom: 1px solid var(--border);
-    font-size: 13px;
-  }
-  .status-member-row:last-child { border-bottom: none; }
-  .status-dot {
-    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-  }
-  .status-dot.active { background: #22c55e; }
-  .status-dot.inactive { background: #cbd5e1; }
-  .status-member-name { flex: 1; font-weight: 500; }
-  .status-member-time { font-size: 11px; color: var(--muted); }
-
-  /* ── End shift confirmation ─────────────── */
-  .confirm-section {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    border-radius: 10px;
-    padding: 12px;
-    margin-bottom: 14px;
-  }
-  .confirm-section h4 {
-    font-size: 13px; color: var(--danger); margin-bottom: 4px;
-  }
-  .confirm-section p {
-    font-size: 12px; color: #991b1b;
-  }
-</style>
+<link rel="stylesheet" href="nurser.css">
 </head>
 <body>
 
@@ -615,7 +39,7 @@
     <button class="pinned-edit-btn" onclick="openPinnedEditor()">✏️ Editar</button>
   </div>
   <p id="pinnedText"></p>
-  <div class="pinned-meta" id="pinnedMeta">Lupe · 07:55</div>
+  <div class="pinned-meta" id="pinnedMeta"></div>
 </div>
 
 <!-- ═══ TABS ═══ -->
@@ -652,9 +76,9 @@
     <button class="tp-close" onclick="closeTeamsPanel()">✕</button>
   </div>
 
-  <div id="teamsCardList" style="flex:1;overflow-y:auto;padding-bottom:10px"></div>
+  <div id="teamsCardList" class="tp-teams-list"></div>
 
-  <div style="padding:0 14px 6px">
+  <div class="tp-create-wrap">
     <div class="tp-create-btn" onclick="openCreateTeamModal()">＋ Crear nuevo equipo</div>
   </div>
 
@@ -830,7 +254,7 @@ function openEventModal(etId) {
     fieldsHtml = `
       <div class="field-group">
         <label>${escHtml(et.name)}</label>
-        <input type="number" id="etNumeric" value="0" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:16px;font-family:inherit">
+        <input type="number" id="etNumeric" value="0">
       </div>`;
   } else if (et.field_type === 'text') {
     fieldsHtml = `
@@ -839,7 +263,6 @@ function openEventModal(etId) {
         <textarea id="etText" rows="3" placeholder="Escribe aquí..."></textarea>
       </div>`;
   }
-  // timestamp_event: no extra field beyond timestamp
 
   document.getElementById('modalContent').innerHTML = `
     <h3>${escHtml(et.icon || '📝')} ${escHtml(et.name)}
@@ -917,7 +340,6 @@ async function loadTimeline() {
   const events = await r.json();
   renderTimeline(events);
 
-  // Detect MY shift status (isolated to the current user)
   if (shiftEventType && currentUser) {
     try {
       const sr = await apiFetch(`/events?team_id=${activeTeam.id}&caregiver_id=${currentUser.id}&limit=10`);
@@ -984,11 +406,7 @@ function updateShiftUI(startTimestamp) {
 
 function toggleShift() {
   if (!shiftEventType) { showToast('Sin tipo de turno configurado'); return; }
-  if (shiftActive) {
-    openEndShiftModal();
-  } else {
-    startShift();
-  }
+  if (shiftActive) { openEndShiftModal(); } else { startShift(); }
 }
 
 async function startShift() {
@@ -1018,7 +436,7 @@ function openEndShiftModal() {
       <h4>¿Estás segura que deseas terminar tu turno?</h4>
       <p>Se registrará como evento en la línea de tiempo.</p>
     </div>
-    <button class="btn-save" style="background:var(--danger)" onclick="confirmEndShift()">Confirmar fin de turno</button>
+    <button class="btn-save btn-danger" onclick="confirmEndShift()">Confirmar fin de turno</button>
   `;
   document.getElementById('modalOverlay').classList.add('open');
 }
@@ -1062,12 +480,8 @@ async function loadStatusPanel() {
     if (!membersRes.ok) throw new Error('members');
     const members = await membersRes.json();
 
-    if (!members.length) {
-      listEl.textContent = 'Sin miembros en el equipo.';
-      return;
-    }
+    if (!members.length) { listEl.textContent = 'Sin miembros en el equipo.'; return; }
 
-    // Load shift events only if a shift event type is configured
     const lastStatus = {};
     if (shiftEventType) {
       const eventsRes = await apiFetch(`/events?team_id=${activeTeam.id}&limit=200`);
@@ -1080,7 +494,6 @@ async function loadStatusPanel() {
       }
     }
 
-    // Build rows: active first, then inactive, then no-data
     const rows = members.map(m => {
       const last = lastStatus[m.id];
       const active = last && last.event_value !== 'end';
@@ -1131,7 +544,7 @@ function openPinnedEditor() {
   currentModal = '__pinned__';
   document.getElementById('modalContent').innerHTML = `
     <h3>📌 Editar nota fijada <button class="modal-close" onclick="closeModal()">✕</button></h3>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Nota visible para todo el equipo.</p>
+    <p class="modal-hint">Nota visible para todo el equipo.</p>
     <div class="field-group">
       <textarea id="pinnedInput" rows="5" style="min-height:120px">${escHtml(pinnedNoteText)}</textarea>
     </div>
@@ -1172,12 +585,8 @@ function renderTeamsPanel() {
   const active = teamsCache.find(t => t.id === activeId);
   const others = teamsCache.filter(t => t.id !== activeId);
   let html = '';
-  if (active) {
-    html += `<div class="tp-section-title">Equipo activo</div>${buildTeamCard(active, true)}`;
-  }
-  if (others.length) {
-    html += `<div class="tp-section-title">Otros equipos</div>${others.map(t => buildTeamCard(t, false)).join('')}`;
-  }
+  if (active) html += `<div class="tp-section-title">Equipo activo</div>${buildTeamCard(active, true)}`;
+  if (others.length) html += `<div class="tp-section-title">Otros equipos</div>${others.map(t => buildTeamCard(t, false)).join('')}`;
   container.innerHTML = html;
 }
 
@@ -1316,7 +725,7 @@ function safeParseJSON(s, fallback) {
   try { return JSON.parse(s); } catch { return fallback; }
 }
 
-// ── Notification popup dismiss (kept for future use) ──
+// ── Notification popup dismiss ──
 function dismissNotif() {
   document.getElementById('notifPopup').style.display = 'none';
 }
