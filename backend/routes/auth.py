@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Response
 from fastapi.responses import RedirectResponse
@@ -131,7 +132,8 @@ def verify_otp(body: VerifyOtpRequest, response: Response):
             invite = db.execute(
                 "SELECT * FROM invite_codes WHERE code = ?", (body.invite_code,)
             ).fetchone()
-            if invite and (not invite["max_uses"] or invite["use_count"] < invite["max_uses"]):
+            if invite and (not invite["max_uses"] or invite["use_count"] < invite["max_uses"]) \
+                    and (not invite["expires_at"] or datetime.now(timezone.utc).isoformat() <= invite["expires_at"]):
                 existing_membership = db.execute(
                     "SELECT id FROM team_memberships WHERE team_id = ? AND user_id = ?",
                     (invite["team_id"], user["id"]),
@@ -191,7 +193,7 @@ def resend_otp(body: ResendOtpRequest):
 
 
 @router.get("/google")
-async def google_login(request: Request, link: bool = False):
+async def google_login(request: Request, link: bool = False, invite_code: Optional[str] = None):
     """Redirect browser to Google consent screen."""
     redirect_uri = os.getenv("GOOGLE_OAUTH_CALLBACK_URL")
     if link:
@@ -199,6 +201,8 @@ async def google_login(request: Request, link: bool = False):
             request.session["link_user_id"] = get_current_user_id(request)
         except HTTPException:
             pass
+    if invite_code:
+        request.session["invite_code"] = invite_code
     return await _oauth.google.authorize_redirect(request, redirect_uri)
 
 
@@ -255,8 +259,34 @@ async def google_callback(request: Request):
             db.commit()
             user = {"id": user_id}
 
+        # Auto-join team if the user arrived via an invite link
+        pending_invite = request.session.pop("invite_code", None)
+        redirect_url = "/contributor.html"
+        if pending_invite:
+            invite = db.execute(
+                "SELECT * FROM invite_codes WHERE code = ?", (pending_invite,)
+            ).fetchone()
+            if invite \
+                    and (not invite["max_uses"] or invite["use_count"] < invite["max_uses"]) \
+                    and (not invite["expires_at"] or datetime.now(timezone.utc).isoformat() <= invite["expires_at"]):
+                existing_mem = db.execute(
+                    "SELECT id FROM team_memberships WHERE team_id = ? AND user_id = ?",
+                    (invite["team_id"], user["id"]),
+                ).fetchone()
+                if not existing_mem:
+                    db.execute(
+                        "INSERT INTO team_memberships (id, team_id, user_id, role) VALUES (?, ?, ?, ?)",
+                        (new_id(), invite["team_id"], user["id"], invite["role"]),
+                    )
+                    db.execute(
+                        "UPDATE invite_codes SET use_count = use_count + 1 WHERE id = ?",
+                        (invite["id"],),
+                    )
+                    db.commit()
+                redirect_url = f"/contributor.html?team_id={invite['team_id']}"
+
         jwt_token = create_jwt(user["id"])
-        redirect = RedirectResponse(url="/contributor.html", status_code=302)
+        redirect = RedirectResponse(url=redirect_url, status_code=302)
         redirect.set_cookie(
             key="access_token",
             value=jwt_token,

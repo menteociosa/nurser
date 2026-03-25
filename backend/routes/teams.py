@@ -1,13 +1,14 @@
 import os
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request, Query
 from pydantic import BaseModel
 
 from database import get_db
-from auth_utils import get_current_user_id, new_id, generate_invite_code, send_sms
+from auth_utils import get_current_user_id, new_id, generate_invite_code
+from default_group import default_group as DEFAULT_GROUP
 
 router = APIRouter()
 
@@ -29,16 +30,23 @@ class UpdateMemberRoleRequest(BaseModel):
     role: str
 
 
-class InviteRequest(BaseModel):
-    phone: str
-    role: Optional[str] = "contributor"
-
 
 class UpdateTeamNoticesRequest(BaseModel):
     team_notices: str
 
 
 # --------------- Helpers ---------------
+
+def _seed_default_event_types(db, team_id: str):
+    """Insert the activity types defined in default_group into a newly created team."""
+    for i, at in enumerate(DEFAULT_GROUP.get("activity_types", [])):
+        et_id = new_id()
+        options_json = json.dumps(at["options"], ensure_ascii=False) if "options" in at else None
+        db.execute(
+            """INSERT INTO event_types (id, team_id, name, field_type, options, icon, sort_order)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (et_id, team_id, at["name"], at["type"], options_json, at.get("icon"), i),
+        )
 
 def require_team_member(db, team_id: str, user_id: str) -> dict:
     """Return membership row or raise 403."""
@@ -72,6 +80,30 @@ def list_teams(request: Request):
                ORDER BY t.created_at DESC""",
             (user_id,),
         ).fetchall()
+
+        if not rows:
+            # First-time user with no group — auto-create the onboarding default group
+            team_id = new_id()
+            db.execute(
+                "INSERT INTO teams (id, name, description, team_notices, created_by) VALUES (?, ?, ?, ?, ?)",
+                (team_id, DEFAULT_GROUP["name"], DEFAULT_GROUP.get("description"),
+                 DEFAULT_GROUP.get("pinned_note"), user_id),
+            )
+            db.execute(
+                "INSERT INTO team_memberships (id, team_id, user_id, role) VALUES (?, ?, ?, 'admin')",
+                (new_id(), team_id, user_id),
+            )
+            _seed_default_event_types(db, team_id)
+            db.commit()
+            rows = db.execute(
+                """SELECT t.*, tm.role AS my_role
+                   FROM teams t
+                   JOIN team_memberships tm ON t.id = tm.team_id
+                   WHERE tm.user_id = ?
+                   ORDER BY t.created_at DESC""",
+                (user_id,),
+            ).fetchall()
+
         return [dict(r) for r in rows]
     finally:
         db.close()
@@ -92,6 +124,7 @@ def create_team(body: CreateTeamRequest, request: Request):
             "INSERT INTO team_memberships (id, team_id, user_id, role) VALUES (?, ?, ?, 'admin')",
             (membership_id, team_id, user_id),
         )
+        _seed_default_event_types(db, team_id)
         db.commit()
         return {"id": team_id, "name": body.name, "description": body.description}
     finally:
@@ -242,62 +275,77 @@ def remove_member(team_id: str, member_user_id: str, request: Request):
         db.close()
 
 
-# --------------- Invites ---------------
+# --------------- Invite link (universal) ---------------
 
-@router.post("/{team_id}/invite")
-def create_invite(team_id: str, body: InviteRequest, request: Request):
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+@router.get("/{team_id}/invite-link")
+def get_invite_link(team_id: str, request: Request):
+    """Return the active universal invite link, or null if none exists."""
     user_id = get_current_user_id(request)
     db = get_db()
     try:
         require_team_admin(db, team_id, user_id)
-        team = db.execute("SELECT name FROM teams WHERE id = ?", (team_id,)).fetchone()
-        if not team:
-            raise HTTPException(status_code=404, detail="Team not found")
-
-        code = generate_invite_code()
-        invite_id = new_id()
-        db.execute(
-            """INSERT INTO invite_codes (id, team_id, code, created_by, invited_phone, role)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (invite_id, team_id, code, user_id, body.phone, body.role or "contributor"),
-        )
-        db.commit()
-
+        row = db.execute(
+            "SELECT code, expires_at FROM invite_codes "
+            "WHERE team_id = ? AND invited_phone IS NULL AND expires_at > ? "
+            "ORDER BY created_at DESC LIMIT 1",
+            (team_id, _now_iso()),
+        ).fetchone()
+        if not row:
+            return {"link": None, "expires_at": None}
         domain = os.getenv("app_domain", "app.nurser.xyz").strip()
-        invite_link = f"https://{domain}/invite.html?code={code}"
-        send_sms(
-            body.phone,
-            f"Te invitaron al grupo \"{team['name']}\" en Nurser. "
-            f"Entra aqui para unirte: {invite_link}",
-        )
-        return {"code": code, "invite_id": invite_id, "phone": body.phone, "link": invite_link}
+        return {
+            "link": f"https://{domain}/invite.html?code={row['code']}",
+            "expires_at": row["expires_at"],
+        }
     finally:
         db.close()
 
 
-@router.get("/{team_id}/invites")
-def list_pending_invites(team_id: str, request: Request):
-    """Return unexpired, unused invites for a team."""
+@router.post("/{team_id}/invite-link")
+def create_invite_link(team_id: str, request: Request):
+    """Create a new universal invite link valid for 24 hours. Replaces any existing one."""
     user_id = get_current_user_id(request)
     db = get_db()
     try:
         require_team_admin(db, team_id, user_id)
-        domain = os.getenv("app_domain", "app.nurser.xyz").strip()
-        rows = db.execute(
-            """SELECT code, invited_phone, role, created_at
-               FROM invite_codes
-               WHERE team_id = ?
-                 AND (max_uses IS NULL OR use_count < max_uses)
-                 AND (expires_at IS NULL OR expires_at > NOW())
-               ORDER BY created_at DESC""",
+        db.execute(
+            "DELETE FROM invite_codes WHERE team_id = ? AND invited_phone IS NULL",
             (team_id,),
-        ).fetchall()
-        result = []
-        for r in rows:
-            d = dict(r)
-            d["link"] = f"https://{domain}/invite.html?code={d['code']}"
-            result.append(d)
-        return result
+        )
+        code = generate_invite_code()
+        expires_at = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+        db.execute(
+            """INSERT INTO invite_codes (id, team_id, code, created_by, invited_phone, role, max_uses, expires_at)
+               VALUES (?, ?, ?, ?, NULL, 'contributor', NULL, ?)""",
+            (new_id(), team_id, code, user_id, expires_at),
+        )
+        db.commit()
+        domain = os.getenv("app_domain", "app.nurser.xyz").strip()
+        return {
+            "link": f"https://{domain}/invite.html?code={code}",
+            "expires_at": expires_at,
+        }
+    finally:
+        db.close()
+
+
+@router.delete("/{team_id}/invite-link")
+def delete_invite_link(team_id: str, request: Request):
+    """Delete (expire) the active universal invite link."""
+    user_id = get_current_user_id(request)
+    db = get_db()
+    try:
+        require_team_admin(db, team_id, user_id)
+        db.execute(
+            "DELETE FROM invite_codes WHERE team_id = ? AND invited_phone IS NULL",
+            (team_id,),
+        )
+        db.commit()
+        return {"message": "Invite link deleted"}
     finally:
         db.close()
 
@@ -314,6 +362,8 @@ def get_invite_info(invite_code: str):
         ).fetchone()
         if not invite:
             raise HTTPException(status_code=404, detail="Invitación no encontrada")
+        if invite["expires_at"] and _now_iso() > invite["expires_at"]:
+            raise HTTPException(status_code=400, detail="Invitación expirada")
         if invite["max_uses"] and invite["use_count"] >= invite["max_uses"]:
             raise HTTPException(status_code=400, detail="Invitación ya fue usada")
 

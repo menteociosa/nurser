@@ -15,6 +15,7 @@ from routes.event_types import router as event_types_router
 from routes.events import router as events_router
 from routes.notifications import router as notifications_router
 from routes.support import router as support_router
+from admin.routes import router as admin_router
 
 
 @asynccontextmanager
@@ -52,6 +53,7 @@ app.include_router(event_types_router, tags=["Event Types"])
 app.include_router(events_router, prefix="/events", tags=["Events"])
 app.include_router(notifications_router, prefix="/notifications", tags=["Notifications"])
 app.include_router(support_router, prefix="/support", tags=["Support"])
+app.include_router(admin_router, prefix="/admin", tags=["Admin"])
 
 # Serve frontend HTML files at the root — no CORS issues
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"

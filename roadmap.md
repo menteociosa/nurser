@@ -4,6 +4,13 @@
 NEVER read this file - this is ONLY for the user
 
 
+
+users who are not admin can leave teams
+no team can be without at least one admin
+If an admin wishes they can "archive" a team, this will hid them (in a greyed out  collapsible) in the teams view 
+
+
+
 Extract CSS and make modernize the theme
 
 Upload pictures!

@@ -94,6 +94,31 @@
     opacity: 0; transition: .3s; pointer-events: none;
   }
   .toast.show { opacity: 1; }
+
+  .btn-google-invite {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 13px 16px;
+    background: #fff; border: 2px solid var(--border);
+    border-radius: var(--radius); font-size: 15px; font-weight: 600;
+    color: var(--text); text-decoration: none; cursor: pointer;
+    transition: border-color .15s, background .15s;
+    margin-bottom: 16px;
+  }
+  .btn-google-invite:hover { border-color: #4285f4; background: #f8f9ff; }
+
+  .oauth-divider-invite {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; color: var(--muted); margin-bottom: 16px;
+  }
+  .oauth-divider-invite::before, .oauth-divider-invite::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .phone-display {
+    width: 100%; padding: 12px 14px;
+    border: 2px solid var(--border); border-radius: var(--radius);
+    font-size: 15px; background: #f1f5f9; color: var(--muted);
+  }
 </style>
 </head>
 <body>
@@ -127,24 +152,39 @@
   </div>
 </div>
 
-<!-- Screen B: New user — register + auto-join -->
-<div class="screen" id="registerScreen">
+<!-- Screen B: Not logged in — login or register, Google or phone -->
+<div class="screen" id="authScreen">
   <div class="invite-card">
     <h2>📩 Invitación</h2>
-    <div class="team-name" id="regTeamName"></div>
-    <p class="invite-msg" id="regInviteMsg">
-      Has sido invitado al grupo. Para unirte, valida tu teléfono.<br>
-      Escribe tu nombre y presiona el botón para recibir un código por texto.
-    </p>
-    <div class="form-group">
+    <div class="team-name" id="authTeamName"></div>
+    <p class="invite-msg" id="authMsg">Para unirte, inicia sesión o crea una cuenta.</p>
+
+    <!-- Google -->
+    <a id="googleInviteBtn" href="#" class="btn-google-invite">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+        <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+        <path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/>
+        <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z"/>
+      </svg>
+      Continuar con Google
+    </a>
+
+    <div class="oauth-divider-invite">o usa tu teléfono</div>
+
+    <!-- Name (only for new users) -->
+    <div class="form-group" id="authNameGroup">
       <label>Tu nombre</label>
-      <input type="text" id="regName" placeholder="María López" autocomplete="name">
+      <input type="text" id="authName" placeholder="María López" autocomplete="name">
     </div>
+
+    <!-- Phone -->
     <div class="form-group">
-      <label>Tu teléfono</label>
-      <input type="tel" id="regPhone" readonly style="background:#f1f5f9">
+      <label>Teléfono</label>
+      <input type="tel" id="authPhone" class="phone-display" placeholder="+52 55 1234 5678">
     </div>
-    <button class="btn-primary" id="regBtn" onclick="doInviteRegister()">Enviar código por SMS</button>
+
+    <button class="btn-primary" id="authSmsBtn" onclick="doSendCode()">Enviar código por SMS</button>
   </div>
 </div>
 
@@ -234,36 +274,33 @@ async function init() {
     // Already logged in — show accept/reject
     document.getElementById('acceptTeamName').textContent = inviteInfo.team_name;
     showScreen('acceptScreen');
-  } else if (inviteInfo.user_exists) {
-    // Phone is registered but not logged in — send them to login with a redirect back
-    // First send OTP automatically
-    try {
-      const r = await fetch(API_BASE + '/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: inviteInfo.invited_phone })
-      });
-      if (r.ok) {
-        // Show OTP screen
-        document.getElementById('otpPhoneDisplay').textContent = inviteInfo.invited_phone;
-        showScreen('otpScreen');
-        setTimeout(() => document.getElementById('otp0').focus(), 50);
-      } else {
-        document.getElementById('errorMsg').textContent = 'Error al enviar código. Intenta iniciar sesión normalmente.';
-        showScreen('errorScreen');
-      }
-    } catch {
-      document.getElementById('errorMsg').textContent = 'Error de conexión.';
-      showScreen('errorScreen');
-    }
   } else {
-    // New user — show register form
-    document.getElementById('regTeamName').textContent = inviteInfo.team_name;
-    document.getElementById('regInviteMsg').innerHTML =
-      `Has sido invitado al grupo <b>${escHtml(inviteInfo.team_name)}</b>. Para unirte, valida tu teléfono.<br>` +
-      `Escribe tu nombre y presiona el botón para recibir un código por texto.`;
-    document.getElementById('regPhone').value = inviteInfo.invited_phone;
-    showScreen('registerScreen');
+    // Not logged in — show unified auth screen
+    document.getElementById('authTeamName').textContent = inviteInfo.team_name;
+    document.getElementById('authMsg').innerHTML =
+      `Has sido invitado a unirte a <b>${escHtml(inviteInfo.team_name)}</b>.` +
+      (inviteInfo.user_exists
+        ? ' Inicia sesión para aceptar.'
+        : ' Crea una cuenta para unirte.');
+
+    // Google button carries the invite code
+    document.getElementById('googleInviteBtn').href =
+      `/auth/google?invite_code=${encodeURIComponent(inviteCode)}`;
+
+    // Pre-fill phone from the invite (always sent to a specific number)
+    const invitePhone = inviteInfo.invited_phone || '';
+    const phoneInput = document.getElementById('authPhone');
+    if (invitePhone) {
+      phoneInput.value = invitePhone;
+      phoneInput.readOnly = true;
+    }
+
+    // Hide name field for existing users (they already have a name)
+    if (inviteInfo.user_exists) {
+      document.getElementById('authNameGroup').style.display = 'none';
+    }
+
+    showScreen('authScreen');
   }
 }
 
@@ -297,47 +334,62 @@ function doReject() {
   window.location.replace('contributor.html');
 }
 
-// ── Screen B: Register new user ──
-async function doInviteRegister() {
-  const name = document.getElementById('regName').value.trim();
-  const phone = document.getElementById('regPhone').value.trim();
-  if (!name) { showToast('Ingresa tu nombre'); return; }
+// ── Screen B: Send phone OTP (works for new and existing users) ──
+async function doSendCode() {
+  const phone = document.getElementById('authPhone').value.trim();
+  const name = document.getElementById('authName').value.trim();
+  if (!phone) { showToast('Número de teléfono requerido'); return; }
 
-  const btn = document.getElementById('regBtn');
+  const btn = document.getElementById('authSmsBtn');
   btn.disabled = true; btn.textContent = 'Enviando...';
   try {
-    const r = await fetch(API_BASE + '/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, invite_code: inviteCode })
-    });
-    const d = await r.json().catch(() => ({}));
-    if (r.ok) {
-      document.getElementById('otpPhoneDisplay').textContent = phone;
-      showScreen('otpScreen');
-      setTimeout(() => document.getElementById('otp0').focus(), 50);
-    } else if (r.status === 409) {
-      // User already exists — send login OTP instead
-      const lr = await fetch(API_BASE + '/auth/login', {
+    // For new users: try register first (needs a name)
+    // For existing users: go straight to login OTP
+    if (!inviteInfo.user_exists && name) {
+      const r = await fetch(API_BASE + '/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone })
+        body: JSON.stringify({ name, phone, invite_code: inviteCode })
       });
-      if (lr.ok) {
-        document.getElementById('otpPhoneDisplay').textContent = phone;
-        showScreen('otpScreen');
-        setTimeout(() => document.getElementById('otp0').focus(), 50);
-      } else {
-        showToast('Error al enviar código');
+      if (r.ok) {
+        showOtpScreen(phone);
+        return;
       }
+      if (r.status !== 409) {
+        const d = await r.json().catch(() => ({}));
+        showToast(d.detail || 'Error al registrarse');
+        return;
+      }
+      // 409 — account already exists for this phone, fall through to login
+    } else if (!inviteInfo.user_exists && !name) {
+      showToast('Escribe tu nombre para crear una cuenta');
+      document.getElementById('authName').focus();
+      return;
+    }
+
+    // Existing user path (or fallback from register 409)
+    const r = await fetch(API_BASE + '/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    if (r.ok) {
+      showOtpScreen(phone);
     } else {
-      showToast(d.detail || 'Error al registrarse');
+      const d = await r.json().catch(() => ({}));
+      showToast(d.detail || 'Error al enviar código');
     }
   } catch {
     showToast('Error de conexión');
   } finally {
     btn.disabled = false; btn.textContent = 'Enviar código por SMS';
   }
+}
+
+function showOtpScreen(phone) {
+  document.getElementById('otpPhoneDisplay').textContent = phone;
+  showScreen('otpScreen');
+  setTimeout(() => document.getElementById('otp0').focus(), 50);
 }
 
 // ── OTP verification (works for both existing and new users) ──

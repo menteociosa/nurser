@@ -41,12 +41,12 @@
   </div>
 
   <div class="status-config">
-    <h4>Estado (ej: en turno, fuera de turno)</h4>
+    <h4>Estado (Para indicar tu estado ej: en turno)</h4>
     <div class="toggle-row">
       <div class="toggle on" id="toggleStatusEvent" onclick="this.classList.toggle('on')"></div>
-      <span>Habilitar switch de cambio de estatus</span>
+      <span>Habilitar</span>
     </div>
-    <p class="config-help">¿Habilitar para todos los miembros del equipo? Todos podrán ver el estado de los demás.</p>
+    <p class="config-help">Esto aplica a todos los miembros del equipo.</p>
 
     <div class="form-group">
       <label>Sí (activo)</label>
@@ -89,27 +89,9 @@
 
   <div class="card" id="membersList"></div>
 
-  <p class="section-title">Invitar nuevo miembro</p>
+  <p class="section-title">Enlace de invitación</p>
   <div class="card">
-    <div class="form-group">
-      <label>Número de teléfono del invitado</label>
-      <input type="tel" id="invitePhone" placeholder="+52 55 1234 5678" inputmode="tel">
-    </div>
-    <div class="form-group">
-      <label>Rol para el nuevo miembro</label>
-      <select id="inviteRole">
-        <option value="contributor">Contribuidor</option>
-        <option value="admin">Editor (Admin)</option>
-        <option value="viewer">Visor</option>
-      </select>
-    </div>
-    <button class="btn-primary" onclick="sendInvite()">Enviar invitación por SMS</button>
-    <p style="font-size:12px;color:var(--muted);margin-top:8px;font-weight:500">Se enviará un enlace por SMS para que se una al equipo.</p>
-  </div>
-
-  <p class="section-title">Invitaciones pendientes</p>
-  <div class="card" id="pendingInvitesCard">
-    <div id="pendingInvitesList"><p style="color:var(--muted);font-size:13px">Cargando…</p></div>
+    <div id="inviteLinkSection"><p style="color:var(--muted);font-size:13px">Cargando…</p></div>
   </div>
 </div>
 
@@ -196,7 +178,7 @@ async function init() {
   // Populate support phone
   document.getElementById('supportPhone').value = currentUser.phone || '';
 
-  await Promise.all([loadTeam(), loadEventTypes(), loadMembers(), loadPendingInvites(), loadAllTeams()]);
+  await Promise.all([loadTeam(), loadEventTypes(), loadMembers(), loadInviteLink(), loadAllTeams()]);
 }
 
 // ── All teams (for panel) ──
@@ -359,7 +341,8 @@ async function loadEventTypes() {
 
 function renderEventTypes() {
   const list = document.getElementById('eventTypeList');
-  if (!eventTypesData.length) {
+  const visibleTypes = eventTypesData.filter(et => !et.is_header);
+  if (!visibleTypes.length) {
     list.innerHTML = '<p style="font-size:13px;color:var(--muted);text-align:center;padding:12px">Sin tipos de evento. Agrega uno.</p>';
     return;
   }
@@ -368,12 +351,12 @@ function renderEventTypes() {
     dropdown: 'Seleccionar uno', multi_select: 'Seleccionar varios',
     timestamp_event: 'Turno (inicio/fin)'
   };
-  list.innerHTML = eventTypesData.map(et => `
+  list.innerHTML = visibleTypes.map(et => `
     <div class="event-type-item" onclick="openEditEvent('${et.id}')">
       <div class="et-icon" style="background:${et.color || '#f1f5f9'}">${et.icon || '📌'}</div>
       <div class="et-body">
         <div class="et-name">${escHtml(et.name)}</div>
-        <div class="et-meta">${FIELD_LABELS[et.field_type] || et.field_type}${et.is_header ? ' · 🔑 Turno' : ''}</div>
+        <div class="et-meta">${FIELD_LABELS[et.field_type] || et.field_type}</div>
       </div>
       <span class="et-arrow">›</span>
     </div>
@@ -527,7 +510,6 @@ function renderMembers() {
         <select class="role-select" onchange="changeMemberRole('${m.id}', this.value)" ${isLastAdmin ? 'disabled' : ''}>
           <option value="admin"       ${m.role==='admin'?'selected':''}>Editor</option>
           <option value="contributor" ${m.role==='contributor'?'selected':''}>Contribuidor</option>
-          <option value="viewer"      ${m.role==='viewer'?'selected':''}>Visor</option>
         </select>
         ${!isMe ? `<button class="btn-remove-member" onclick="removeMember('${m.id}','${escHtml(m.name)}')" title="Eliminar">✕</button>` : ''}
       </div>`;
@@ -568,50 +550,77 @@ async function removeMember(userId, name) {
   }
 }
 
-// ── Invite by phone ──
-async function sendInvite() {
-  const phone = document.getElementById('invitePhone').value.trim();
-  const role  = document.getElementById('inviteRole').value;
-  if (!phone) { showToast('⚠️ Ingresa un número de teléfono'); return; }
+// ── Invite link ──
+async function loadInviteLink() {
+  const container = document.getElementById('inviteLinkSection');
+  if (!container) return;
   try {
-    const r = await apiFetch(`/teams/${teamId}/invite`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, role })
-    });
-    if (!r.ok) {
-      const d = await r.json().catch(() => ({}));
-      throw new Error(d.detail || 'Error');
-    }
-    document.getElementById('invitePhone').value = '';
-    showToast('✅ Invitación enviada por SMS');
-    loadPendingInvites();
-  } catch (e) {
-    showToast(`❌ ${e.message}`);
+    const r = await apiFetch(`/teams/${teamId}/invite-link`);
+    if (!r.ok) throw new Error();
+    renderInviteLink(await r.json());
+  } catch {
+    container.innerHTML = '<p style="color:var(--muted);font-size:13px">Error al cargar.</p>';
   }
 }
 
-// ── Pending invites ──
-async function loadPendingInvites() {
-  const container = document.getElementById('pendingInvitesList');
-  if (!container) return;
-  try {
-    const r = await apiFetch(`/teams/${teamId}/invites`);
-    if (!r.ok) throw new Error('fetch failed');
-    const invites = await r.json();
-    if (!invites.length) {
-      container.innerHTML = '<p style="color:var(--muted);font-size:13px">No hay invitaciones pendientes.</p>';
-      return;
-    }
-    let html = '<table class="pending-invites-table"><thead><tr><th>Teléfono</th><th>Link</th></tr></thead><tbody>';
-    for (const inv of invites) {
-      html += `<tr><td>${inv.invited_phone}</td><td><a href="${inv.link}" target="_blank">${inv.link}</a></td></tr>`;
-    }
-    html += '</tbody></table>';
-    container.innerHTML = html;
-  } catch {
-    container.innerHTML = '<p style="color:var(--muted);font-size:13px">Error al cargar invitaciones.</p>';
+function renderInviteLink(data) {
+  const container = document.getElementById('inviteLinkSection');
+  if (!data || !data.link) {
+    container.innerHTML = `
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">
+        Cualquier persona con el enlace puede unirse como <b>Contribuidor</b>. El enlace dura 24 horas.
+      </p>
+      <button class="btn-primary" onclick="createInviteLink()">Crear enlace de invitación</button>`;
+    return;
   }
+  const expiresAt = new Date(data.expires_at);
+  const minLeft = Math.max(0, Math.round((expiresAt - Date.now()) / 60000));
+  const h = Math.floor(minLeft / 60), m = minLeft % 60;
+  const timeStr = h > 0 ? `${h}h ${m}min` : minLeft > 0 ? `${minLeft} min` : 'menos de 1 min';
+  container.innerHTML = `
+    <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Expira en <b>${timeStr}</b> · Rol: Contribuidor</p>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <input type="text" id="inviteLinkInput" value="${escHtml(data.link)}" readonly
+        style="flex:1;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;cursor:pointer;font-family:inherit"
+        onclick="copyInviteLink()" title="Clic para copiar">
+      <button onclick="copyInviteLink()" title="Copiar"
+        style="padding:8px 10px;background:var(--primary-light);border:none;border-radius:8px;cursor:pointer;font-size:15px">📋</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-outline" style="margin-top:0;flex:1" onclick="createInviteLink()">🔄 Nuevo enlace</button>
+      <button class="btn-danger-outline" style="margin-top:0;flex:1" onclick="deleteInviteLink()">🗑️ Eliminar</button>
+    </div>`;
+}
+
+async function createInviteLink() {
+  try {
+    const r = await apiFetch(`/teams/${teamId}/invite-link`, { method: 'POST' });
+    if (!r.ok) throw new Error();
+    renderInviteLink(await r.json());
+    showToast('✅ Enlace creado');
+  } catch {
+    showToast('❌ Error al crear enlace');
+  }
+}
+
+async function deleteInviteLink() {
+  if (!confirm('¿Eliminar el enlace? Nadie más podrá usarlo.')) return;
+  try {
+    const r = await apiFetch(`/teams/${teamId}/invite-link`, { method: 'DELETE' });
+    if (!r.ok) throw new Error();
+    renderInviteLink(null);
+    showToast('🗑️ Enlace eliminado');
+  } catch {
+    showToast('❌ Error al eliminar enlace');
+  }
+}
+
+function copyInviteLink() {
+  const input = document.getElementById('inviteLinkInput');
+  if (!input) return;
+  navigator.clipboard.writeText(input.value)
+    .then(() => showToast('📋 Enlace copiado'))
+    .catch(() => { input.select(); document.execCommand('copy'); showToast('📋 Enlace copiado'); });
 }
 
 // ── Support feedback ──
