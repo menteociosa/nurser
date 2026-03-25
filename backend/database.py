@@ -61,6 +61,7 @@ def init_db():
             phone_verified INTEGER NOT NULL DEFAULT 0,
             otp_code TEXT,
             otp_expires_at TEXT,
+            google_id TEXT,
             created_at TEXT NOT NULL DEFAULT ({_TS_DEFAULT})
         )""",
         f"""CREATE TABLE IF NOT EXISTS teams (

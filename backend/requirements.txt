@@ -7,5 +7,9 @@ python-multipart==0.0.9
 requests>=2.31.0
 agentmail
 psycopg2-binary
-
-
+authlib
+itsdangerous
+httpx
+authlib
+itsdangerous
+httpx

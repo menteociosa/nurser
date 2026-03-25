@@ -10,7 +10,6 @@ router = APIRouter()
 
 class UpdateProfileRequest(BaseModel):
     name: Optional[str] = None
-    email: Optional[str] = None
 
 
 @router.get("/me")
@@ -19,7 +18,7 @@ def get_me(request: Request):
     db = get_db()
     try:
         user = db.execute(
-            "SELECT id, name, phone, email, created_at FROM users WHERE id = ?",
+            "SELECT id, name, phone, email, google_id, created_at FROM users WHERE id = ?",
             (user_id,),
         ).fetchone()
         if not user:
@@ -41,9 +40,6 @@ def update_me(body: UpdateProfileRequest, request: Request):
                 raise HTTPException(status_code=422, detail="El nombre no puede estar vacío")
             fields.append("name = ?")
             values.append(body.name.strip())
-        if body.email is not None:
-            fields.append("email = ?")
-            values.append(body.email or None)
 
         if not fields:
             raise HTTPException(status_code=400, detail="No fields to update")
@@ -53,7 +49,7 @@ def update_me(body: UpdateProfileRequest, request: Request):
         db.commit()
 
         user = db.execute(
-            "SELECT id, name, phone, email, created_at FROM users WHERE id = ?",
+            "SELECT id, name, phone, email, google_id, created_at FROM users WHERE id = ?",
             (user_id,),
         ).fetchone()
         return dict(user)

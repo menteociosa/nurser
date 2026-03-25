@@ -1,14 +1,28 @@
+import os
+
 from fastapi import APIRouter, HTTPException, Response
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
+from starlette.requests import Request
 from typing import Optional
+from authlib.integrations.starlette_client import OAuth
 
 from database import get_db
 from auth_utils import (
     create_jwt, generate_otp, otp_expiry, is_otp_expired,
-    send_otp, new_id, JWT_EXPIRY_HOURS,
+    send_otp, new_id, JWT_EXPIRY_HOURS, get_current_user_id,
 )
 
 router = APIRouter()
+
+_oauth = OAuth()
+_oauth.register(
+    name="google",
+    client_id=os.getenv("GOOGLE_OAUTH_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_OAUTH_CLIENT_SECRET"),
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
 
 
 class RegisterRequest(BaseModel):
@@ -172,5 +186,147 @@ def resend_otp(body: ResendOtpRequest):
         db.commit()
         send_otp(body.phone, otp)
         return {"message": "Código reenviado"}
+    finally:
+        db.close()
+
+
+@router.get("/google")
+async def google_login(request: Request, link: bool = False):
+    """Redirect browser to Google consent screen."""
+    redirect_uri = os.getenv("GOOGLE_OAUTH_CALLBACK_URL")
+    if link:
+        try:
+            request.session["link_user_id"] = get_current_user_id(request)
+        except HTTPException:
+            pass
+    return await _oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@router.get("/google/callback")
+async def google_callback(request: Request):
+    """Handle Google OAuth callback — find or create user, link account, or redirect."""
+    token = await _oauth.google.authorize_access_token(request)
+    info = token["userinfo"]
+    google_id = info["sub"]
+    email = info.get("email", "")
+    name = info.get("name") or email
+
+    link_user_id = request.session.pop("link_user_id", None)
+    db = get_db()
+    try:
+        if link_user_id:
+            existing = db.execute(
+                "SELECT id FROM users WHERE google_id = ?", (google_id,)
+            ).fetchone()
+            if existing and existing["id"] != link_user_id:
+                return RedirectResponse(url="/profile.html?error=google_already_linked", status_code=302)
+            db.execute(
+                "UPDATE users SET google_id = ?, email = COALESCE(NULLIF(email, ''), ?) WHERE id = ?",
+                (google_id, email, link_user_id),
+            )
+            db.commit()
+            return RedirectResponse(url="/profile.html?linked=google", status_code=302)
+
+        # Normal login flow
+        user = db.execute(
+            "SELECT id FROM users WHERE google_id = ?", (google_id,)
+        ).fetchone()
+
+        if not user and email:
+            # Link Google to an existing account matched by email
+            user = db.execute(
+                "SELECT id FROM users WHERE email = ?", (email,)
+            ).fetchone()
+            if user:
+                db.execute(
+                    "UPDATE users SET google_id = ? WHERE id = ?",
+                    (google_id, user["id"]),
+                )
+                db.commit()
+
+        if not user:
+            # Brand-new user — phone placeholder (column is NOT NULL UNIQUE)
+            user_id = new_id()
+            db.execute(
+                "INSERT INTO users (id, name, phone, email, password_hash, phone_verified, google_id) "
+                "VALUES (?, ?, ?, ?, '', 1, ?)",
+                (user_id, name, f"google_{google_id}", email, google_id),
+            )
+            db.commit()
+            user = {"id": user_id}
+
+        jwt_token = create_jwt(user["id"])
+        redirect = RedirectResponse(url="/contributor.html", status_code=302)
+        redirect.set_cookie(
+            key="access_token",
+            value=jwt_token,
+            httponly=True,
+            samesite="lax",
+            max_age=JWT_EXPIRY_HOURS * 3600,
+        )
+        return redirect
+    finally:
+        db.close()
+
+
+class LinkPhoneRequest(BaseModel):
+    phone: str
+
+
+class LinkPhoneVerifyRequest(BaseModel):
+    phone: str
+    otp: str
+
+
+@router.post("/link-phone/send")
+def link_phone_send(body: LinkPhoneRequest, request: Request):
+    """Send OTP to a phone number to link it to the currently logged-in account."""
+    user_id = get_current_user_id(request)
+    db = get_db()
+    try:
+        existing = db.execute(
+            "SELECT id FROM users WHERE phone = ?", (body.phone,)
+        ).fetchone()
+        if existing:
+            raise HTTPException(status_code=409, detail="Este número ya está en uso")
+        otp = generate_otp()
+        expires = otp_expiry()
+        db.execute(
+            "UPDATE users SET otp_code = ?, otp_expires_at = ? WHERE id = ?",
+            (otp, expires, user_id),
+        )
+        db.commit()
+        send_otp(body.phone, otp)
+        return {"message": "Código enviado"}
+    finally:
+        db.close()
+
+
+@router.post("/link-phone/verify")
+def link_phone_verify(body: LinkPhoneVerifyRequest, request: Request):
+    """Verify OTP and link the phone number to the currently logged-in account."""
+    user_id = get_current_user_id(request)
+    db = get_db()
+    try:
+        existing = db.execute(
+            "SELECT id FROM users WHERE phone = ? AND id != ?", (body.phone, user_id)
+        ).fetchone()
+        if existing:
+            raise HTTPException(status_code=409, detail="Este número ya está en uso")
+        user = db.execute(
+            "SELECT otp_code, otp_expires_at FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+        if not user or not user["otp_code"]:
+            raise HTTPException(status_code=400, detail="No hay código pendiente. Solicita uno nuevo.")
+        if is_otp_expired(user["otp_expires_at"]):
+            raise HTTPException(status_code=400, detail="Código expirado. Solicita uno nuevo.")
+        if body.otp != user["otp_code"]:
+            raise HTTPException(status_code=400, detail="Código incorrecto")
+        db.execute(
+            "UPDATE users SET phone = ?, phone_verified = 1, otp_code = NULL, otp_expires_at = NULL WHERE id = ?",
+            (body.phone, user_id),
+        )
+        db.commit()
+        return {"message": "Teléfono vinculado correctamente"}
     finally:
         db.close()

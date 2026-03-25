@@ -276,6 +276,32 @@ input[type="color"] {
 .btn-primary:active, .btn-save:active { transform: scale(0.97); box-shadow: 0 2px 8px rgba(67,97,238,0.2); }
 .btn-primary:disabled, .btn-save:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
+.btn-google {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; padding: 11px 16px; margin-top: 8px;
+  background: #fff; color: #3c4043;
+  border: 1.5px solid var(--border); border-radius: var(--radius);
+  font-size: 15px; font-weight: 700; font-family: 'Nunito', inherit;
+  text-decoration: none; cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+  box-shadow: var(--shadow-sm);
+}
+.btn-google:hover { background: #f8f9fa; box-shadow: var(--shadow-md); }
+
+.oauth-divider {
+  text-align: center; margin: 14px 0 4px;
+  color: var(--muted); font-size: 13px;
+}
+
+.phone-input-row { display: flex; gap: 8px; align-items: center; }
+.cc-select {
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--card); font-size: 14px; font-family: 'Nunito', inherit;
+  color: var(--text); outline: none; cursor: pointer; flex-shrink: 0;
+  padding: 8px 6px;
+}
+.phone-input-row input { flex: 1; }
+
 .btn-outline {
   width: 100%; padding: 11px;
   background: transparent; color: var(--primary);

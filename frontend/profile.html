@@ -122,6 +122,38 @@
     from { transform: translateY(40px); opacity: 0; }
     to   { transform: translateY(0); opacity: 1; }
   }
+
+  /* ── Account linking ─────────────────────────────────────── */
+  .link-banner {
+    background: #fffbeb; border: 1px solid #f59e0b;
+    border-radius: var(--radius); padding: 12px 14px;
+    font-size: 14px; color: #92400e; margin: 12px 0; line-height: 1.5;
+  }
+  .phone-input-row { display: flex; gap: 8px; align-items: center; }
+  .cc-select {
+    border: none; background: transparent;
+    font-size: 14px; font-family: inherit; color: var(--text);
+    outline: none; cursor: pointer; flex-shrink: 0;
+  }
+  .phone-input-row input { flex: 1; }
+  .btn-google {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; padding: 12px 16px; margin-top: 8px;
+    background: #fff; color: #3c4043;
+    border: 1.5px solid var(--border); border-radius: var(--radius);
+    font-size: 15px; font-weight: 600; font-family: inherit;
+    text-decoration: none; cursor: pointer;
+  }
+  .btn-google:hover { background: #f8f9fa; }
+  .otp-input { display: flex; gap: 8px; justify-content: center; }
+  .link-otp-box {
+    width: 42px; height: 48px; text-align: center;
+    font-size: 20px; font-weight: 700;
+    border: 2px solid var(--border); border-radius: 8px;
+    outline: none; font-family: inherit; color: var(--text);
+    background: var(--card);
+  }
+  .link-otp-box:focus { border-color: var(--primary); }
 </style>
 </head>
 <body>
@@ -146,15 +178,64 @@
     </div>
     <div class="form-row">
       <label>Correo electrónico</label>
-      <input type="text" id="profileEmail" value="" placeholder="opcional">
+      <input type="text" id="profileEmail" value="" placeholder="(vincula con Google)" class="readonly" readonly>
     </div>
-    <div class="form-row">
+    <div class="form-row" id="phoneRow">
       <label>Teléfono</label>
       <input type="text" id="profilePhone" value="" class="readonly" readonly>
       <div style="font-size:11px;color:var(--muted);margin-top:3px">Para cambiar tu número contacta soporte</div>
     </div>
   </div>
   <button class="btn-primary" onclick="saveProfile()">Guardar cambios</button>
+
+  <div id="linkSection" style="display:none">
+    <div class="link-banner">
+      🔗 Liga tu correo y tu teléfono para que puedas conectarte con cualquiera de los dos.
+    </div>
+
+    <div id="linkPhoneSection" style="display:none">
+      <div class="section-title">Agregar teléfono</div>
+      <div class="card">
+        <div class="form-row">
+          <label>Número de teléfono</label>
+          <div class="phone-input-row">
+            <select class="cc-select" id="linkCC">
+              <option value="+52">🇲🇽 +52</option>
+              <option value="+1">🇺🇸 +1</option>
+              <option value="+44">🇬🇧 +44</option>
+              <option value="+34">🇪🇸 +34</option>
+              <option value="+57">🇨🇴 +57</option>
+              <option value="+54">🇦🇷 +54</option>
+              <option value="+55">🇧🇷 +55</option>
+              <option value="+51">🇵🇪 +51</option>
+              <option value="+56">🇨🇱 +56</option>
+            </select>
+            <input type="tel" id="linkPhone" placeholder="55 1234 5678" inputmode="numeric">
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary" id="linkPhoneBtn" onclick="sendLinkPhoneOtp()">Enviar código</button>
+      <div id="linkOtpSection" style="display:none;margin-top:12px;text-align:center">
+        <p style="margin-bottom:12px;font-size:14px;color:var(--muted)">Código enviado a <b id="linkPhoneDisplay"></b></p>
+        <div class="otp-input">
+          <input type="tel" maxlength="1" class="link-otp-box" id="lotp0" inputmode="numeric">
+          <input type="tel" maxlength="1" class="link-otp-box" id="lotp1" inputmode="numeric">
+          <input type="tel" maxlength="1" class="link-otp-box" id="lotp2" inputmode="numeric">
+          <input type="tel" maxlength="1" class="link-otp-box" id="lotp3" inputmode="numeric">
+          <input type="tel" maxlength="1" class="link-otp-box" id="lotp4" inputmode="numeric">
+          <input type="tel" maxlength="1" class="link-otp-box" id="lotp5" inputmode="numeric">
+        </div>
+        <button class="btn-primary" onclick="verifyLinkPhone()" style="margin-top:12px">Verificar</button>
+      </div>
+    </div>
+
+    <div id="linkGoogleSection" style="display:none">
+      <div class="section-title">Conectar con Google</div>
+      <a href="/auth/google?link=true" class="btn-google">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18" style="margin-right:8px;">Conectar con Google
+      </a>
+    </div>
+  </div>
 
   <div class="section-title">General</div>
   <div class="card">
@@ -180,6 +261,9 @@ const API_BASE = '';
 let currentUser = null;
 
 async function init() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('linked') === 'google') showToast('\u2705 Google vinculado correctamente');
+  if (params.get('error') === 'google_already_linked') showToast('\u26a0\ufe0f Esa cuenta de Google ya est\u00e1 en uso');
   try {
     const r = await fetch(API_BASE + '/users/me', { credentials: 'include' });
     if (!r.ok) { window.location.replace('login.html'); return; }
@@ -191,24 +275,38 @@ async function init() {
 }
 
 function populateProfile(user) {
+  const isPlaceholderPhone = user.phone && user.phone.startsWith('google_');
+  const hasGoogle = !!user.google_id;
+  const needsLinking = isPlaceholderPhone || !hasGoogle;
+
   document.getElementById('profileName').value = user.name || '';
   document.getElementById('profileEmail').value = user.email || '';
-  document.getElementById('profilePhone').value = user.phone || '';
+
+  const phoneRow = document.getElementById('phoneRow');
+  if (isPlaceholderPhone) {
+    phoneRow.style.display = 'none';
+  } else {
+    document.getElementById('profilePhone').value = user.phone || '';
+  }
+
   document.getElementById('avatarBig').textContent = (user.name || '?').charAt(0).toUpperCase();
   document.getElementById('avatarName').textContent = user.name || '';
-  document.getElementById('avatarEmail').textContent = user.email || user.phone || '';
+  document.getElementById('avatarEmail').textContent = user.email || (!isPlaceholderPhone ? user.phone : '') || '';
+
+  document.getElementById('linkSection').style.display = needsLinking ? '' : 'none';
+  document.getElementById('linkPhoneSection').style.display = isPlaceholderPhone ? '' : 'none';
+  document.getElementById('linkGoogleSection').style.display = !hasGoogle ? '' : 'none';
 }
 
 async function saveProfile() {
   const name = document.getElementById('profileName').value.trim();
-  const email = document.getElementById('profileEmail').value.trim();
-  if (!name) { showToast('⚠️ El nombre es requerido'); return; }
+  if (!name) { showToast('\u26a0\ufe0f El nombre es requerido'); return; }
   try {
     const r = await fetch(API_BASE + '/users/me', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ name, email: email || null })  // phone is not editable
+      body: JSON.stringify({ name })
     });
     if (!r.ok) throw new Error();
     const updated = await r.json();
@@ -230,6 +328,75 @@ function showToast(msg) {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2000);
 }
+
+function buildPhone(ccId, numId) {
+  const num = document.getElementById(numId).value.replace(/\s+/g, '');
+  if (!num) return '';
+  return num.startsWith('+') ? num : document.getElementById(ccId).value + num;
+}
+
+async function sendLinkPhoneOtp() {
+  const phone = buildPhone('linkCC', 'linkPhone');
+  if (!phone) { showToast('Ingresa tu n\u00famero'); return; }
+  const btn = document.getElementById('linkPhoneBtn');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    const r = await fetch('/auth/link-phone/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ phone })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) {
+      document.getElementById('linkPhoneDisplay').textContent = phone;
+      document.getElementById('linkOtpSection').style.display = '';
+      btn.style.display = 'none';
+    } else {
+      showToast(d.detail || 'Error al enviar c\u00f3digo');
+      btn.disabled = false; btn.textContent = 'Enviar c\u00f3digo';
+    }
+  } catch {
+    showToast('Error de conexi\u00f3n');
+    btn.disabled = false; btn.textContent = 'Enviar c\u00f3digo';
+  }
+}
+
+async function verifyLinkPhone() {
+  const otp = [0,1,2,3,4,5].map(i => document.getElementById(`lotp${i}`).value).join('');
+  if (otp.length < 6) { showToast('Ingresa el c\u00f3digo completo'); return; }
+  const phone = buildPhone('linkCC', 'linkPhone');
+  try {
+    const r = await fetch('/auth/link-phone/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ phone, otp })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) {
+      showToast('\u2705 Tel\u00e9fono vinculado correctamente');
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      showToast(d.detail || 'C\u00f3digo incorrecto');
+    }
+  } catch {
+    showToast('Error de conexi\u00f3n');
+  }
+}
+
+document.querySelectorAll('.link-otp-box').forEach((input, i) => {
+  input.addEventListener('input', () => {
+    const v = input.value.replace(/\D/g, '');
+    input.value = v.slice(0, 1);
+    if (v && i < 5) document.getElementById(`lotp${i + 1}`).focus();
+    if (v && i === 5) verifyLinkPhone();
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Backspace' && !input.value && i > 0)
+      document.getElementById(`lotp${i - 1}`).focus();
+  });
+});
 
 init();
 </script>

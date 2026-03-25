@@ -86,9 +86,35 @@
     <div class="tp-footer-item" onclick="window.location.href='profile.html'">
       <span class="tp-fi-icon">👤</span> Mi perfil
     </div>
+    <div class="tp-footer-item" onclick="openContactModal()">
+      <span class="tp-fi-icon">💬</span> Contáctanos
+    </div>
     <div class="tp-footer-item" onclick="doLogout()">
       <span class="tp-fi-icon">🚪</span> <span style="color:var(--danger)">Cerrar sesión</span>
     </div>
+  </div>
+</div>
+
+<!-- ═══ CONTACT MODAL ═══ -->
+<div id="contactModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,0.18)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h2 style="font-size:17px;font-weight:700">💬 Contáctanos</h2>
+      <button onclick="closeContactModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888;line-height:1">&times;</button>
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:12px;font-weight:700;color:#8292a5;margin-bottom:4px">Teléfono</label>
+      <input id="cntPhone" type="tel" style="width:100%;border:1px solid #e3e8f0;border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;outline:none" placeholder="+52 55 1234 5678">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:12px;font-weight:700;color:#8292a5;margin-bottom:4px">Correo electrónico</label>
+      <input id="cntEmail" type="email" style="width:100%;border:1px solid #e3e8f0;border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;outline:none" placeholder="tu@correo.com">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:12px;font-weight:700;color:#8292a5;margin-bottom:4px">Comentarios</label>
+      <textarea id="cntMessage" rows="4" style="width:100%;border:1px solid #e3e8f0;border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;outline:none;resize:vertical" placeholder="¿En qué podemos ayudarte?"></textarea>
+    </div>
+    <button id="cntSendBtn" onclick="sendContact()" style="width:100%;padding:13px;background:linear-gradient(135deg,#4361ee,#3a50d9);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer">Enviar mensaje</button>
   </div>
 </div>
 
@@ -696,9 +722,50 @@ function closeTeamsPanel() {
   document.getElementById('teamsPanel').classList.remove('open');
 }
 
+// ── Contact modal ──
+function openContactModal() {
+  // Pre-fill phone/email from current user if available
+  const u = currentUser;
+  if (u) {
+    const phone = u.phone && u.phone.startsWith('google_') ? '' : (u.phone || '');
+    document.getElementById('cntPhone').value = phone;
+    document.getElementById('cntEmail').value = u.email || '';
+  }
+  document.getElementById('cntMessage').value = '';
+  document.getElementById('contactModal').style.display = 'flex';
+}
+function closeContactModal() {
+  document.getElementById('contactModal').style.display = 'none';
+}
+async function sendContact() {
+  const phone   = document.getElementById('cntPhone').value.trim();
+  const email   = document.getElementById('cntEmail').value.trim();
+  const message = document.getElementById('cntMessage').value.trim();
+  if (!message) { showToast('Escribe un comentario', true); return; }
+  const btn = document.getElementById('cntSendBtn');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    const r = await apiFetch('/support/contact', {
+      method: 'POST',
+      body: JSON.stringify({ phone, email, message })
+    });
+    if (r && r.ok !== false) {
+      closeContactModal();
+      showToast('\u2705 Mensaje enviado. ¡Gracias!');
+    } else {
+      showToast('Error al enviar. Intenta de nuevo.', true);
+    }
+  } catch {
+    showToast('Error de conexión', true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enviar mensaje';
+  }
+}
+
 // ── Logout ──
 async function doLogout() {
   await apiFetch('/auth/logout', { method: 'POST' }).catch(() => {});
+
   window.location.replace('login.html');
 }
 
