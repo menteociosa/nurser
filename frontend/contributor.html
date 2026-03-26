@@ -376,7 +376,7 @@ async function loadTimeline() {
         const myShiftEvents = myEvents.filter(e => e.event_type_id === shiftEventType.id);
         if (myShiftEvents.length > 0) {
           const last = myShiftEvents[0];
-          shiftActive = last.event_value !== 'end';
+          shiftActive = last.event_value !== 'termina';
           updateShiftUI(shiftActive ? last.timestamp : null);
         } else {
           shiftActive = false;
@@ -444,7 +444,7 @@ async function startShift() {
     const r = await apiFetch('/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ team_id: activeTeam.id, event_type_id: shiftEventType.id, event_value: 'start', timestamp: ts, note: null })
+      body: JSON.stringify({ team_id: activeTeam.id, event_type_id: shiftEventType.id, event_value: 'comienza', timestamp: ts, note: null })
     });
     if (!r.ok) throw new Error();
     shiftActive = true;
@@ -476,7 +476,7 @@ async function confirmEndShift() {
     const r = await apiFetch('/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ team_id: activeTeam.id, event_type_id: shiftEventType.id, event_value: 'end', timestamp: ts, note: null })
+      body: JSON.stringify({ team_id: activeTeam.id, event_type_id: shiftEventType.id, event_value: 'termina', timestamp: ts, note: null })
     });
     if (!r.ok) throw new Error();
     shiftActive = false;
@@ -524,7 +524,7 @@ async function loadStatusPanel() {
 
     const rows = members.map(m => {
       const last = lastStatus[m.id];
-      const active = last && last.event_value !== 'end';
+      const active = last && last.event_value !== 'termina';
       const timeStr = last ? (last.timestamp || '').slice(11, 16) : null;
       return { name: m.name, active, timeStr, hasData: !!last };
     });
