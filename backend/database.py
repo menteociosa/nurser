@@ -125,6 +125,44 @@ def init_db():
             ALTER TABLE invite_codes ADD COLUMN invited_phone TEXT;
         EXCEPTION WHEN duplicate_column THEN NULL;
         END $$""",
+        # Migration: add notify flags to teams
+        """DO $$ BEGIN
+            ALTER TABLE teams ADD COLUMN notify_on_event BOOLEAN NOT NULL DEFAULT FALSE;
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$""",
+        """DO $$ BEGIN
+            ALTER TABLE teams ADD COLUMN notify_on_pinned BOOLEAN NOT NULL DEFAULT FALSE;
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$""",
+        # Migration: add receive_push_notifications to team_memberships
+        """DO $$ BEGIN
+            ALTER TABLE team_memberships ADD COLUMN receive_push_notifications BOOLEAN NOT NULL DEFAULT TRUE;
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$""",
+        # Push subscriptions table
+        f"""CREATE TABLE IF NOT EXISTS push_subscriptions (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            endpoint TEXT NOT NULL,
+            p256dh TEXT NOT NULL,
+            auth TEXT NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            UNIQUE(user_id, endpoint)
+        )""",
+        # Migrations: add columns if the table was created with an older schema
+        """DO $$ BEGIN
+            ALTER TABLE push_subscriptions ADD COLUMN endpoint TEXT NOT NULL DEFAULT '';
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$""",
+        """DO $$ BEGIN
+            ALTER TABLE push_subscriptions ADD COLUMN p256dh TEXT NOT NULL DEFAULT '';
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$""",
+        """DO $$ BEGIN
+            ALTER TABLE push_subscriptions ADD COLUMN auth TEXT NOT NULL DEFAULT '';
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$""",
+        "CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions(user_id)",
     ]
 
     for stmt in statements:

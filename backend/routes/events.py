@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from database import get_db
 from auth_utils import get_current_user_id, new_id
 from routes.teams import require_team_member
+from routes.notifications import send_push_to_team
 
 router = APIRouter()
 
@@ -47,7 +48,26 @@ def create_event(body: CreateEventRequest, request: Request):
         )
         db.commit()
 
-        row = db.execute("SELECT * FROM events WHERE id = ?", (event_id,)).fetchone()
+        row = db.execute(
+            """SELECT e.*, u.name AS caregiver_name, et.name AS event_type_name, et.icon
+               FROM events e
+               JOIN users u ON e.caregiver_id = u.id
+               JOIN event_types et ON e.event_type_id = et.id
+               WHERE e.id = ?""",
+            (event_id,),
+        ).fetchone()
+
+        # Send push if team has notify_on_event enabled
+        team = db.execute("SELECT notify_on_event, name FROM teams WHERE id = ?", (body.team_id,)).fetchone()
+        if team and team["notify_on_event"]:
+            caregiver = row["caregiver_name"] or "Alguien"
+            et_name = row["event_type_name"] or "evento"
+            icon = row["icon"] or ""
+            push_body = f"{caregiver}: {icon} {et_name}".strip()
+            if body.event_value:
+                push_body += f" — {body.event_value}"
+            send_push_to_team(db, body.team_id, team["name"], push_body, exclude_user_id=user_id)
+
         return dict(row)
     finally:
         db.close()

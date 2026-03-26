@@ -10,6 +10,11 @@ from database import get_db
 from auth_utils import get_current_user_id, new_id, generate_invite_code
 from default_group import default_group as DEFAULT_GROUP
 
+# Deferred import to avoid circular — imported inside functions where needed
+def _send_push_to_team(db, team_id, title, body_text, exclude_user_id=None):
+    from routes.notifications import send_push_to_team
+    send_push_to_team(db, team_id, title, body_text, exclude_user_id)
+
 router = APIRouter()
 
 
@@ -24,6 +29,8 @@ class UpdateTeamRequest(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     team_notices: Optional[str] = None
+    notify_on_event: Optional[bool] = None
+    notify_on_pinned: Optional[bool] = None
 
 
 class UpdateMemberRoleRequest(BaseModel):
@@ -33,6 +40,10 @@ class UpdateMemberRoleRequest(BaseModel):
 
 class UpdateTeamNoticesRequest(BaseModel):
     team_notices: str
+
+
+class UpdateNotificationPrefRequest(BaseModel):
+    receive_push_notifications: bool
 
 
 # --------------- Helpers ---------------
@@ -161,6 +172,12 @@ def update_team(team_id: str, body: UpdateTeamRequest, request: Request):
         if body.team_notices is not None:
             fields.append("team_notices = ?")
             values.append(body.team_notices)
+        if body.notify_on_event is not None:
+            fields.append("notify_on_event = ?")
+            values.append(body.notify_on_event)
+        if body.notify_on_pinned is not None:
+            fields.append("notify_on_pinned = ?")
+            values.append(body.notify_on_pinned)
         if not fields:
             raise HTTPException(status_code=400, detail="No fields to update")
         values.append(team_id)
@@ -209,6 +226,12 @@ def update_notices(team_id: str, body: UpdateTeamNoticesRequest, request: Reques
             raise HTTPException(status_code=403, detail="Viewers cannot edit notices")
         db.execute("UPDATE teams SET team_notices = ? WHERE id = ?", (body.team_notices, team_id))
         db.commit()
+        # Send push if team has notify_on_pinned enabled
+        team = db.execute("SELECT notify_on_pinned, name FROM teams WHERE id = ?", (team_id,)).fetchone()
+        if team and team["notify_on_pinned"] and body.team_notices:
+            author = db.execute("SELECT name FROM users WHERE id = ?", (user_id,)).fetchone()
+            author_name = author["name"] if author else "Alguien"
+            _send_push_to_team(db, team_id, team["name"], f"📌 Nota fijada actualizada por {author_name}", exclude_user_id=user_id)
         return {"team_notices": body.team_notices}
     finally:
         db.close()
@@ -271,6 +294,33 @@ def remove_member(team_id: str, member_user_id: str, request: Request):
             raise HTTPException(status_code=404, detail="Member not found")
         db.commit()
         return {"message": "Member removed"}
+    finally:
+        db.close()
+
+
+@router.get("/{team_id}/members/me/notifications")
+def get_my_notification_pref(team_id: str, request: Request):
+    user_id = get_current_user_id(request)
+    db = get_db()
+    try:
+        m = require_team_member(db, team_id, user_id)
+        return {"receive_push_notifications": bool(m.get("receive_push_notifications", True))}
+    finally:
+        db.close()
+
+
+@router.patch("/{team_id}/members/me/notifications")
+def set_my_notification_pref(team_id: str, body: UpdateNotificationPrefRequest, request: Request):
+    user_id = get_current_user_id(request)
+    db = get_db()
+    try:
+        require_team_member(db, team_id, user_id)
+        db.execute(
+            "UPDATE team_memberships SET receive_push_notifications = ? WHERE team_id = ? AND user_id = ?",
+            (body.receive_push_notifications, team_id, user_id),
+        )
+        db.commit()
+        return {"receive_push_notifications": body.receive_push_notifications}
     finally:
         db.close()
 

@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Nurser — Acceso</title>
 <link rel="stylesheet" href="nurser.css">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4361ee">
 </head>
 <body>
 
@@ -285,6 +287,10 @@ function showToast(msg, isError = false) {
   t.classList.add('show');
   clearTimeout(t._t);
   t._t = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
 }
 </script>
 </body>

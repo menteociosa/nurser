@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Nurser — Admin / Editor</title>
 <link rel="stylesheet" href="nurser.css">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4361ee">
 </head>
 <body>
 
@@ -289,6 +291,10 @@ async function loadTeam() {
   document.getElementById('adminTeamName').textContent = currentTeam.name;
   document.getElementById('teamNameInput').value = currentTeam.name || '';
   document.getElementById('teamDescInput').value = currentTeam.description || '';
+  const toggleStatus = document.getElementById('toggleNotifyStatus');
+  const togglePin = document.getElementById('toggleNotifyPin');
+  if (toggleStatus) toggleStatus.classList.toggle('on', !!currentTeam.notify_on_event);
+  if (togglePin) togglePin.classList.toggle('on', !!currentTeam.notify_on_pinned);
 }
 
 async function saveTeamInfo() {
@@ -299,7 +305,12 @@ async function saveTeamInfo() {
     const r = await apiFetch(`/teams/${teamId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description: desc || null })
+      body: JSON.stringify({
+        name,
+        description: desc || null,
+        notify_on_event: document.getElementById('toggleNotifyStatus')?.classList.contains('on') ?? false,
+        notify_on_pinned: document.getElementById('toggleNotifyPin')?.classList.contains('on') ?? false
+      })
     });
     if (!r.ok) throw new Error();
     currentTeam = await r.json();
@@ -674,6 +685,10 @@ function showToast(msg) {
 }
 
 init();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>
