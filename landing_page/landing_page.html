@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CareShift — Handover Digital para Equipos de Cuidado</title>
+  <meta name="description" content="CareShift (Nurser) es la plataforma moderna para equipos de cuidado. Registra eventos, transfiere información entre turnos y mejora la seguridad del paciente.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4361ee;
+      --primary-dark: #3a50d9;
+      --accent: #4895ef;
+      --bg: #f7faff;
+      --text: #222b45;
+      --muted: #8292a5;
+      --card: #fff;
+      --radius: 16px;
+    }
+    body {
+      margin: 0;
+      font-family: 'Inter', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      padding: 48px 0 32px 0;
+      text-align: center;
+    }
+    header h1 {
+      font-size: 2.6rem;
+      margin: 0 0 12px 0;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+    header p {
+      font-size: 1.25rem;
+      margin: 0 auto;
+      max-width: 520px;
+      color: #e0e7ff;
+    }
+    .cta-btn {
+      margin-top: 28px;
+      background: var(--primary-dark);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 36px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 24px rgba(67,97,238,0.10);
+      transition: background 0.2s;
+    }
+    .cta-btn:hover {
+      background: var(--accent);
+    }
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 32px;
+      justify-content: center;
+      margin: 48px auto 0 auto;
+      max-width: 1100px;
+    }
+    .feature-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: 0 2px 16px rgba(67,97,238,0.06);
+      padding: 32px 28px;
+      flex: 1 1 320px;
+      min-width: 280px;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .feature-card h3 {
+      margin: 0 0 10px 0;
+      color: var(--primary);
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+    .feature-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+    .hero-img {
+      width: 100%;
+      max-width: 420px;
+      margin: 40px auto 0 auto;
+      display: block;
+      border-radius: 24px;
+      box-shadow: 0 8px 40px rgba(67,97,238,0.10);
+      background: #e7f0ff;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+    }
+    .section-title {
+      text-align: center;
+      font-size: 2rem;
+      margin: 64px 0 24px 0;
+      color: var(--primary-dark);
+      font-weight: 800;
+    }
+    .contact-section {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: 0 2px 16px rgba(67,97,238,0.06);
+      max-width: 420px;
+      margin: 48px auto 64px auto;
+      padding: 36px 32px 28px 32px;
+    }
+    .contact-section h2 {
+      margin-top: 0;
+      color: var(--primary);
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+    .contact-section label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      font-weight: 600;
+    }
+    .contact-section input, .contact-section textarea {
+      width: 100%;
+      border: 1px solid #e3e8f0;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 1rem;
+      font-family: inherit;
+      margin-bottom: 16px;
+      outline: none;
+      background: #f7faff;
+      transition: border 0.2s;
+    }
+    .contact-section input:focus, .contact-section textarea:focus {
+      border: 1.5px solid var(--primary);
+    }
+    .contact-section button {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.08rem;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s;
+    }
+    .contact-section button:disabled {
+      background: #b6c6f5;
+      cursor: not-allowed;
+    }
+    .contact-success {
+      color: var(--primary-dark);
+      font-weight: 700;
+      margin-top: 12px;
+      text-align: center;
+    }
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 1rem;
+      padding: 32px 0 24px 0;
+      background: none;
+    }
+    @media (max-width: 700px) {
+      .features { flex-direction: column; gap: 0; }
+      .feature-card { max-width: 100%; margin-bottom: 24px; }
+      .section-title { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CareShift</h1>
+    <p>La nueva forma de registrar y transferir información entre turnos de cuidado. Rápido, seguro y siempre a la mano.</p>
+    <button class="cta-btn" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">Contáctanos</button>
+  </header>
+
+  <!-- Hero Image Placeholder -->
+  <img src="https://placehold.co/420x236?text=App+Screenshot" alt="App Screenshot" class="hero-img">
+  <!-- Suggestion: Replace with a screenshot of the Nurser/CareShift app dashboard on mobile -->
+
+  <div class="section-title">¿Por qué CareShift?</div>
+  <section class="features">
+    <div class="feature-card">
+      <h3>Registro ultra-rápido</h3>
+      <p>Registra eventos en segundos con solo un par de toques. Menos tiempo en el teléfono, más tiempo con el paciente.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Transferencias seguras</h3>
+      <p>Información estructurada y segura para que cada turno comience con contexto claro y actualizado.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Alertas y tareas</h3>
+      <p>Recibe notificaciones sobre eventos importantes y tareas pendientes. Nada se olvida, todo queda registrado.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Notas de voz y texto</h3>
+      <p>Agrega notas de voz o texto para mayor detalle, con transcripción automática.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Multi-equipo y multi-idioma</h3>
+      <p>Administra varios equipos y pacientes. Disponible en español, inglés, sueco y alemán.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Privacidad y seguridad</h3>
+      <p>Datos cifrados, acceso autenticado y cumplimiento con estándares de privacidad.</p>
+    </div>
+  </section>
+
+  <div class="section-title" id="contact">Contáctanos</div>
+  <section class="contact-section">
+    <h2>¿Tienes dudas o quieres una demo?</h2>
+    <form id="contactForm" onsubmit="return sendContact(event)">
+      <label for="phone">Teléfono</label>
+      <input type="tel" id="phone" name="phone" placeholder="Ej: +52 55 1234 5678">
+      <label for="email">Correo electrónico</label>
+      <input type="email" id="email" name="email" placeholder="tu@correo.com">
+      <label for="message">Mensaje</label>
+      <textarea id="message" name="message" rows="4" placeholder="¿En qué podemos ayudarte?" required></textarea>
+      <button type="submit" id="sendBtn">Enviar mensaje</button>
+      <div class="contact-success" id="contactSuccess" style="display:none"></div>
+    </form>
+  </section>
+
+  <footer class="footer">
+    &copy; 2026 CareShift (Nurser). Todos los derechos reservados.
+  </footer>
+
+  <script>
+    async function sendContact(e) {
+      e.preventDefault();
+      const phone = document.getElementById('phone').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const message = document.getElementById('message').value.trim();
+      const btn = document.getElementById('sendBtn');
+      const success = document.getElementById('contactSuccess');
+      if (!message) return;
+      btn.disabled = true; btn.textContent = 'Enviando...';
+      success.style.display = 'none';
+      try {
+        const r = await fetch('/support/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, email, message })
+        });
+        if (r && r.ok !== false) {
+          success.textContent = '✅ ¡Mensaje enviado! Pronto nos pondremos en contacto.';
+          success.style.display = 'block';
+          document.getElementById('contactForm').reset();
+        } else {
+          success.textContent = 'Error al enviar. Intenta de nuevo.';
+          success.style.display = 'block';
+        }
+      } catch {
+        success.textContent = 'Error de conexión. Intenta más tarde.';
+        success.style.display = 'block';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Enviar mensaje';
+      }
+      return false;
+    }
+  </script>
+</body>
+</html>

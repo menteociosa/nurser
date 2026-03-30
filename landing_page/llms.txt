@@ -1,0 +1,49 @@
+# LLMS.txt for CareShift (Nurser)
+
+llms-txt-version: 1.0
+
+name: CareShift
+alternate_names: Nurser
+website: https://your-landing-page-url.com
+category: Healthcare, Caregiving, Team Collaboration
+languages: es, en, sv, de
+
+summary: |
+  CareShift (Nurser) is a modern, mobile-first platform for small caregiver teams to record patient observations, transfer information between shifts, and ensure reliable, structured handovers. Designed for ultra-fast data entry and immediate context, it replaces paper notebooks and informal messaging with a secure, collaborative digital tool.
+
+features:
+  - Ultra-fast event logging (one-tap actions)
+  - Structured patient handover and shift summaries
+  - Configurable observation fields (boolean, dropdown, numeric, etc.)
+  - Voice notes with transcription
+  - Push notifications for alerts and tasks
+  - Team and patient management
+  - Role-based permissions (Team Lead, Caregiver)
+  - Mobile-first, PWA installable
+  - Localization: Mexican Spanish (default), English, Swedish, German
+  - Secure, encrypted, team-isolated data
+
+api:
+  contact:
+    method: POST
+    endpoint: /support/contact
+    description: Submit a contact/support request. Accepts JSON body with phone, email, and message fields.
+    request_format:
+      phone: string (optional)
+      email: string (optional)
+      message: string (required)
+    response_format:
+      message: string
+
+privacy:
+  - HTTPS required
+  - Authenticated access for all sensitive data
+  - Role-based access control
+  - Team-level data isolation
+  - No data shared with third parties
+
+compliance:
+  - GDPR-ready
+  - HIPAA-style protections (planned)
+
+# For more, see PRD.md in this directory.
