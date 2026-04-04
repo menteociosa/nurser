@@ -179,19 +179,17 @@
     <div class="form-row">
       <label>Correo electrónico</label>
       <input type="text" id="profileEmail" value="" placeholder="(vincula con Google)" class="readonly" readonly>
+      <div id="emailVerifiedBadge" style="font-size:11px;margin-top:3px"></div>
     </div>
     <div class="form-row" id="phoneRow">
       <label>Teléfono</label>
       <input type="text" id="profilePhone" value="" class="readonly" readonly>
-      <div style="font-size:11px;color:var(--muted);margin-top:3px">Para cambiar tu número contacta soporte</div>
+      <div id="phoneVerifiedBadge" style="font-size:11px;margin-top:3px"></div>
     </div>
   </div>
   <button class="btn-primary" onclick="saveProfile()">Guardar cambios</button>
 
   <div id="linkSection" style="display:none">
-    <div class="link-banner">
-      🔗 Liga tu correo y tu teléfono para que puedas conectarte con cualquiera de los dos.
-    </div>
 
     <div id="linkPhoneSection" style="display:none">
       <div class="section-title">Agregar teléfono</div>
@@ -275,27 +273,42 @@ async function init() {
 }
 
 function populateProfile(user) {
-  const isPlaceholderPhone = user.phone && user.phone.startsWith('google_');
+  const hasRealPhone = user.phone && !user.phone.startsWith('google_') && !user.phone.startsWith('email_');
+  const phoneVerified = !!user.phone_verified;
+  const emailVerified = !!user.email_verified;
   const hasGoogle = !!user.google_id;
-  const needsLinking = isPlaceholderPhone || !hasGoogle;
 
   document.getElementById('profileName').value = user.name || '';
   document.getElementById('profileEmail').value = user.email || '';
 
+  // Email verified badge
+  const emailBadge = document.getElementById('emailVerifiedBadge');
+  emailBadge.textContent = emailVerified ? '✓ Verificado' : '⚠️ No verificado';
+  emailBadge.style.color = emailVerified ? 'var(--success, #10b981)' : 'var(--warning, #f59e0b)';
+
+  // Phone row
   const phoneRow = document.getElementById('phoneRow');
-  if (isPlaceholderPhone) {
-    phoneRow.style.display = 'none';
-  } else {
+  if (hasRealPhone) {
     document.getElementById('profilePhone').value = user.phone || '';
+    const phoneBadge = document.getElementById('phoneVerifiedBadge');
+    phoneBadge.textContent = phoneVerified ? '✓ Verificado' : '⚠️ No verificado';
+    phoneBadge.style.color = phoneVerified ? 'var(--success, #10b981)' : 'var(--warning, #f59e0b)';
+    phoneRow.style.display = '';
+  } else {
+    phoneRow.style.display = 'none';
   }
 
   document.getElementById('avatarBig').textContent = (user.name || '?').charAt(0).toUpperCase();
   document.getElementById('avatarName').textContent = user.name || '';
-  document.getElementById('avatarEmail').textContent = user.email || (!isPlaceholderPhone ? user.phone : '') || '';
+  document.getElementById('avatarEmail').textContent = user.email || '';
 
-  document.getElementById('linkSection').style.display = needsLinking ? '' : 'none';
-  document.getElementById('linkPhoneSection').style.display = isPlaceholderPhone ? '' : 'none';
+  // Show phone-add section for all users who don't have a verified phone
+  const showAddPhone = !(hasRealPhone && phoneVerified);
+  document.getElementById('linkPhoneSection').style.display = showAddPhone ? '' : 'none';
   document.getElementById('linkGoogleSection').style.display = !hasGoogle ? '' : 'none';
+
+  const needsAnyLinking = showAddPhone || !hasGoogle;
+  document.getElementById('linkSection').style.display = needsAnyLinking ? '' : 'none';
 }
 
 async function saveProfile() {

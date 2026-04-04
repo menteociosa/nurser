@@ -18,7 +18,7 @@ def get_me(request: Request):
     db = get_db()
     try:
         user = db.execute(
-            "SELECT id, name, phone, email, google_id, created_at FROM users WHERE id = ?",
+            "SELECT id, name, phone, email, google_id, phone_verified, email_verified, created_at FROM users WHERE id = ?",
             (user_id,),
         ).fetchone()
         if not user:
@@ -49,7 +49,7 @@ def update_me(body: UpdateProfileRequest, request: Request):
         db.commit()
 
         user = db.execute(
-            "SELECT id, name, phone, email, google_id, created_at FROM users WHERE id = ?",
+            "SELECT id, name, phone, email, google_id, phone_verified, email_verified, created_at FROM users WHERE id = ?",
             (user_id,),
         ).fetchone()
         return dict(user)

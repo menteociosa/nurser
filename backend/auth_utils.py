@@ -16,7 +16,7 @@ JWT_EXPIRY_HOURS = int(os.getenv("JWT_EXPIRY_HOURS", "87600"))  # 10 years defau
 BULKSMS_USERNAME = os.getenv("BULKSMS_USERNAME", "placeholder")
 BULKSMS_PASSWORD = os.getenv("BULKSMS_PASSWORD", "placeholder")
 
-OTP_EXPIRY_MINUTES = 10
+OTP_EXPIRY_MINUTES = 60  # 1 hour
 
 
 # --------------- Password hashing ---------------
@@ -93,6 +93,35 @@ def is_otp_expired(expires_at: str) -> bool:
 def send_otp(phone: str, otp: str):
     """Send OTP via BulkSMS. Falls back to printing to console if using placeholder keys."""
     send_sms(phone, f"Tu clave de acceso a Nurser es: {otp}")
+
+
+def send_email_otp(email: str, otp: str):
+    """Send OTP code via email using AgentMail. Falls back to console if not configured."""
+    api_key = os.getenv("agent_mail_nurser", "")
+    inbox_id = os.getenv("agentmail_inbox_id", "")
+    if not api_key or not inbox_id:
+        print(f"\n{'='*50}")
+        print(f"  EMAIL to {email}: OTP = {otp}")
+        print(f"{'='*50}\n")
+        return
+    try:
+        from agentmail import AgentMail
+        client = AgentMail(api_key=api_key)
+        client.inboxes.messages.send(
+            inbox_id=inbox_id,
+            to=email,
+            subject="Tu código de acceso a Nurser",
+            text=(
+                f"Tu código de verificación es: {otp}\n\n"
+                "Este código es válido por 1 hora.\n\n"
+                "Si no solicitaste este código, ignora este mensaje."
+            ),
+        )
+    except Exception as exc:
+        print(f"\n{'='*50}")
+        print(f"  EMAIL to {email}: OTP = {otp}")
+        print(f"  AgentMail error: {exc}")
+        print(f"{'='*50}\n")
 
 
 def send_sms(phone: str, body_text: str):

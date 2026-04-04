@@ -26,30 +26,37 @@
   </div>
 
   <div class="form-panel active" id="loginPanel">
-    <div class="form-group">
-      <label>Tu número de teléfono</label>
-      <div class="phone-input-row">
-        <select class="cc-select" id="loginCC">
-          <option value="+52">🇲🇽 +52</option>
-          <option value="+1">🇺🇸 +1</option>
-          <option value="+44">🇬🇧 +44</option>
-          <option value="+34">🇪🇸 +34</option>
-          <option value="+57">🇨🇴 +57</option>
-          <option value="+54">🇦🇷 +54</option>
-          <option value="+55">🇧🇷 +55</option>
-          <option value="+51">🇵🇪 +51</option>
-          <option value="+56">🇨🇱 +56</option>
-        </select>
-        <input type="tel" id="loginPhone" placeholder="55 1234 5678"
-               autocomplete="tel" inputmode="numeric">
+    <!-- Step 1: email entry -->
+    <div id="loginEmailStep">
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" id="loginEmail" placeholder="tu@correo.com"
+               autocomplete="email" inputmode="email"
+               onkeydown="if(event.key==='Enter')doLoginContinue()">
       </div>
+      <p class="form-hint">Ingresa tu correo para continuar.</p>
+      <button class="btn-primary" id="loginBtn" onclick="doLoginContinue()">Continuar</button>
+      <div id="loginGoogleHint" style="display:none" class="google-hint">
+        Esta cuenta usa Google. <a href="/auth/google">Iniciar sesión con Google →</a>
+      </div>
+      <div class="oauth-divider">— o —</div>
+      <a href="/auth/google" class="btn-google">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18" style="vertical-align:middle;margin-right:8px;">Continuar con Google
+      </a>
     </div>
-    <p class="form-hint">Te enviaremos un código por SMS para confirmar tu identidad.</p>
-    <button class="btn-primary" id="loginBtn" onclick="doLogin()">Enviar código</button>
-    <div class="oauth-divider">— o —</div>
-    <a href="/auth/google" class="btn-google">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18" style="vertical-align:middle;margin-right:8px;">Continuar con Google
-    </a>
+    <!-- Step 2: password entry -->
+    <div id="loginPasswordStep" style="display:none">
+      <div class="email-badge" id="loginEmailBadge"></div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="loginPassword" placeholder="••••••••"
+               autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')doPasswordLogin()">
+      </div>
+      <p class="form-hint forgot-link"><a onclick="doForgotPassword()">¿Olvidaste tu contraseña?</a></p>
+      <button class="btn-primary" id="loginPasswordBtn" onclick="doPasswordLogin()">Ingresar</button>
+      <div class="edit-phone-row"><a onclick="goBackToEmailStep()">← Cambiar correo</a></div>
+    </div>
   </div>
 
   <div class="form-panel" id="registerPanel">
@@ -58,25 +65,15 @@
       <input type="text" id="regName" placeholder="María López" autocomplete="name">
     </div>
     <div class="form-group">
-      <label>Número de teléfono</label>
-      <div class="phone-input-row">
-        <select class="cc-select" id="registerCC">
-          <option value="+52">🇲🇽 +52</option>
-          <option value="+1">🇺🇸 +1</option>
-          <option value="+44">🇬🇧 +44</option>
-          <option value="+34">🇪🇸 +34</option>
-          <option value="+57">🇨🇴 +57</option>
-          <option value="+54">🇦🇷 +54</option>
-          <option value="+55">🇧🇷 +55</option>
-          <option value="+51">🇵🇪 +51</option>
-          <option value="+56">🇨🇱 +56</option>
-        </select>
-        <input type="tel" id="regPhone" placeholder="55 1234 5678"
-               autocomplete="tel" inputmode="numeric">
-      </div>
+      <label>Correo electrónico</label>
+      <input type="email" id="regEmail" placeholder="tu@correo.com"
+             autocomplete="email" inputmode="email">
     </div>
-    <p class="form-hint">Te enviaremos un código SMS para verificar tu número.</p>
+    <p class="form-hint">Te enviaremos un código de verificación por correo.</p>
     <button class="btn-primary" id="registerBtn" onclick="doRegister()">Enviar código</button>
+    <div id="registerGoogleHint" style="display:none" class="google-hint">
+      Esta cuenta usa Google. <a href="/auth/google">Registrarse con Google →</a>
+    </div>
     <div class="oauth-divider">— o —</div>
     <a href="/auth/google" class="btn-google">
       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18" style="vertical-align:middle;margin-right:8px;">Registrarse con Google
@@ -86,8 +83,8 @@
 
 <div id="otpScreen" class="sub-screen">
   <div class="screen-header">
-    <h2>📱 Ingresa el código</h2>
-    <p>Enviamos un código de 6 dígitos a<br><b id="otpPhoneDisplay"></b></p>
+    <h2>� Ingresa el código</h2>
+    <p>Enviamos un código de 6 dígitos a<br><b id="otpEmailDisplay"></b></p>
   </div>
   <div class="otp-input">
     <input type="tel" maxlength="1" class="otp-box" id="otp0" inputmode="numeric">
@@ -99,15 +96,70 @@
   </div>
   <button class="btn-primary" id="verifyBtn" onclick="doVerify()">Verificar</button>
   <div class="resend-row">¿No recibiste el código? <a onclick="doResend()">Reenviar</a></div>
-  <div class="edit-phone-row"><a onclick="goBackToEdit()">← Editar número</a></div>
+  <div class="edit-phone-row"><a onclick="goBackToEdit()">&#8592; Editar correo</a></div>
+</div>
+
+<div id="setPasswordScreen" class="sub-screen">
+  <div class="screen-header">
+    <h2>&#128273; Nueva contraseña</h2>
+    <p>Crea una contraseña para acceder más rápido la próxima vez.</p>
+  </div>
+  <div class="form-group">
+    <label>Nueva contraseña</label>
+    <input type="password" id="newPassword" placeholder="Mínimo 8 caracteres"
+           autocomplete="new-password"
+           onkeydown="if(event.key==='Enter')doSetPassword()">
+  </div>
+  <button class="btn-primary" id="setPasswordBtn" onclick="doSetPassword()">Guardar contraseña</button>
+  <div class="resend-row"><a onclick="skipSetPassword()">Saltar por ahora →</a></div>
 </div>
 
 <div class="toast" id="toast"></div>
 
+<style>
+.google-hint {
+  background: var(--warning-light, #fffbeb);
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #92400e;
+  margin-top: 10px;
+  text-align: center;
+}
+.google-hint a {
+  color: #b45309;
+  font-weight: 700;
+  text-decoration: none;
+}
+.email-badge {
+  background: var(--surface, #f3f4f6);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--text-secondary, #6b7280);
+  margin-bottom: 16px;
+  word-break: break-all;
+}
+.forgot-link {
+  text-align: right;
+  margin-top: -4px;
+  margin-bottom: 4px;
+}
+.forgot-link a {
+  color: var(--primary, #4361ee);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.forgot-link a:hover { text-decoration: underline; }
+</style>
+
 <script>
 const API_BASE = '';
-let otpPhone   = '';
-let otpContext = 'login';
+let otpEmail   = '';
+let otpContext = 'login'; // 'login' | 'register' | 'forgot_password'
 
 (async () => {
   try {
@@ -121,61 +173,152 @@ function switchTab(tab) {
   document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
   document.getElementById('loginPanel').classList.toggle('active', tab === 'login');
   document.getElementById('registerPanel').classList.toggle('active', tab === 'register');
+  document.getElementById('loginGoogleHint').style.display = 'none';
+  document.getElementById('registerGoogleHint').style.display = 'none';
+  // Reset login panel to email step when switching tabs
+  if (tab === 'login') resetLoginPanel();
 }
 
-function buildPhone(ccId, numId) {
-  const num = document.getElementById(numId).value.replace(/\s+/g, '');
-  if (!num) return '';
-  return num.startsWith('+') ? num : document.getElementById(ccId).value + num;
+function resetLoginPanel() {
+  document.getElementById('loginEmailStep').style.display = '';
+  document.getElementById('loginPasswordStep').style.display = 'none';
+  document.getElementById('loginGoogleHint').style.display = 'none';
 }
 
-async function doLogin() {
-  const phone = buildPhone('loginCC', 'loginPhone');
-  if (!phone) { showToast('Ingresa tu número', true); return; }
+async function doLoginContinue() {
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  if (!email || !email.includes('@')) { showToast('Ingresa tu correo electrónico', true); return; }
   const btn = document.getElementById('loginBtn');
-  btn.disabled = true; btn.textContent = 'Enviando...';
+  btn.disabled = true; btn.textContent = 'Verificando...';
+  document.getElementById('loginGoogleHint').style.display = 'none';
   try {
-    const r = await fetch(API_BASE + '/auth/login', {
+    const r = await fetch(API_BASE + '/auth/check-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone })
+      body: JSON.stringify({ email })
+    });
+    const d = await r.json().catch(() => ({}));
+    otpEmail = email;
+    if (r.ok) {
+      if (d.verified && d.has_password) {
+        // Show password step
+        showPasswordStep(email);
+      } else {
+        // Send OTP (verified but no password, or unverified — should not reach here normally)
+        otpContext = 'login';
+        await sendEmailOtp(email);
+      }
+    } else if (r.status === 409 && d.detail === 'GOOGLE_ACCOUNT') {
+      document.getElementById('loginGoogleHint').style.display = '';
+    } else if (r.status === 404) {
+      showToast('Correo no encontrado. ¿Primera vez? Regístrate.', true);
+      setTimeout(() => { switchTab('register'); document.getElementById('regEmail').value = email; }, 1800);
+    } else {
+      showToast(d.detail || 'Error al verificar correo', true);
+    }
+  } catch {
+    showToast('Error de conexión', true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Continuar';
+  }
+}
+
+function showPasswordStep(email) {
+  document.getElementById('loginEmailStep').style.display = 'none';
+  document.getElementById('loginEmailBadge').textContent = email;
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginPasswordStep').style.display = '';
+  setTimeout(() => document.getElementById('loginPassword').focus(), 50);
+}
+
+function goBackToEmailStep() {
+  document.getElementById('loginPasswordStep').style.display = 'none';
+  document.getElementById('loginEmailStep').style.display = '';
+  document.getElementById('loginEmail').focus();
+}
+
+async function sendEmailOtp(email) {
+  const r = await fetch(API_BASE + '/auth/login-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (r.ok) {
+    showOtpScreen();
+  } else {
+    showToast(d.detail || 'Error al enviar código', true);
+  }
+}
+
+async function doPasswordLogin() {
+  const password = document.getElementById('loginPassword').value;
+  if (!password) { showToast('Ingresa tu contraseña', true); return; }
+  const btn = document.getElementById('loginPasswordBtn');
+  btn.disabled = true; btn.textContent = 'Ingresando...';
+  try {
+    const r = await fetch(API_BASE + '/auth/login-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email: otpEmail, password })
+    });
+    if (r.ok) {
+      window.location.replace('contributor.html');
+    } else {
+      const d = await r.json().catch(() => ({}));
+      showToast(d.detail || 'Contraseña incorrecta', true);
+    }
+  } catch {
+    showToast('Error de conexión', true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Ingresar';
+  }
+}
+
+async function doForgotPassword() {
+  otpContext = 'forgot_password';
+  showToast('Enviando código de verificación...');
+  try {
+    const r = await fetch(API_BASE + '/auth/login-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: otpEmail })
     });
     const d = await r.json().catch(() => ({}));
     if (r.ok) {
-      otpPhone = phone; otpContext = 'login';
       showOtpScreen();
-    } else if (r.status === 404) {
-      showToast('Número no encontrado. ¿Primera vez? Regístrate.', true);
-      setTimeout(() => { switchTab('register'); document.getElementById('regPhone').value = phone; }, 1800);
     } else {
       showToast(d.detail || 'Error al enviar código', true);
     }
   } catch {
     showToast('Error de conexión', true);
-  } finally {
-    btn.disabled = false; btn.textContent = 'Enviar código';
   }
 }
 
 async function doRegister() {
   const name  = document.getElementById('regName').value.trim();
-  const phone = buildPhone('registerCC', 'regPhone');
-  if (!name || !phone) { showToast('Completa nombre y teléfono', true); return; }
+  const email = document.getElementById('regEmail').value.trim().toLowerCase();
+  if (!name) { showToast('Ingresa tu nombre', true); return; }
+  if (!email || !email.includes('@')) { showToast('Ingresa un correo válido', true); return; }
   const btn = document.getElementById('registerBtn');
   btn.disabled = true; btn.textContent = 'Enviando...';
+  document.getElementById('registerGoogleHint').style.display = 'none';
   try {
-    const r = await fetch(API_BASE + '/auth/register', {
+    const r = await fetch(API_BASE + '/auth/register-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone })
+      body: JSON.stringify({ name, email })
     });
     const d = await r.json().catch(() => ({}));
     if (r.ok) {
-      otpPhone = phone; otpContext = 'register';
-      showOtpScreen();
+      otpEmail = email; otpContext = 'register';
+      showOtpScreen(d.existing_unverified);
+    } else if (r.status === 409 && d.detail === 'GOOGLE_ACCOUNT') {
+      document.getElementById('registerGoogleHint').style.display = '';
     } else if (r.status === 409) {
-      showToast('Número ya registrado — inicia sesión', true);
-      setTimeout(() => { switchTab('login'); document.getElementById('loginPhone').value = phone; }, 1500);
+      showToast('Correo ya registrado — inicia sesión', true);
+      setTimeout(() => { switchTab('login'); document.getElementById('loginEmail').value = email; }, 1500);
     } else {
       showToast(d.detail || 'Error al registrarse', true);
     }
@@ -186,11 +329,12 @@ async function doRegister() {
   }
 }
 
-function showOtpScreen() {
+function showOtpScreen(existingUnverified = false) {
   document.getElementById('authScreen').style.display = 'none';
   clearOtpBoxes();
-  document.getElementById('otpPhoneDisplay').textContent = otpPhone;
+  document.getElementById('otpEmailDisplay').textContent = otpEmail;
   document.getElementById('otpScreen').classList.add('active');
+  if (existingUnverified) showToast('Ya teníamos un código pendiente — te enviamos uno nuevo');
   setTimeout(() => document.getElementById('otp0').focus(), 50);
 }
 
@@ -199,13 +343,52 @@ function goBackToEdit() {
   document.getElementById('authScreen').style.display = '';
   if (otpContext === 'register') {
     switchTab('register');
-    document.getElementById('regPhone').value = otpPhone;
-    document.getElementById('regPhone').focus();
+    document.getElementById('regEmail').value = otpEmail;
+    document.getElementById('regEmail').focus();
+  } else if (otpContext === 'forgot_password') {
+    switchTab('login');
+    showPasswordStep(otpEmail);
   } else {
     switchTab('login');
-    document.getElementById('loginPhone').value = otpPhone;
-    document.getElementById('loginPhone').focus();
+    document.getElementById('loginEmail').value = otpEmail;
+    document.getElementById('loginEmail').focus();
   }
+}
+
+function showSetPasswordScreen() {
+  document.getElementById('otpScreen').classList.remove('active');
+  document.getElementById('newPassword').value = '';
+  document.getElementById('setPasswordScreen').classList.add('active');
+  setTimeout(() => document.getElementById('newPassword').focus(), 50);
+}
+
+async function doSetPassword() {
+  const password = document.getElementById('newPassword').value;
+  if (password.length < 8) { showToast('Mínimo 8 caracteres', true); return; }
+  const btn = document.getElementById('setPasswordBtn');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    const r = await fetch(API_BASE + '/auth/set-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ password })
+    });
+    if (r.ok) {
+      window.location.replace('contributor.html');
+    } else {
+      const d = await r.json().catch(() => ({}));
+      showToast(d.detail || 'Error al guardar contraseña', true);
+    }
+  } catch {
+    showToast('Error de conexión', true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar contraseña';
+  }
+}
+
+function skipSetPassword() {
+  window.location.replace('contributor.html');
 }
 
 function clearOtpBoxes() {
@@ -245,14 +428,18 @@ async function doVerify() {
   const btn = document.getElementById('verifyBtn');
   btn.disabled = true; btn.textContent = 'Verificando...';
   try {
-    const r = await fetch(API_BASE + '/auth/verify-otp', {
+    const r = await fetch(API_BASE + '/auth/verify-email-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ phone: otpPhone, otp })
+      body: JSON.stringify({ email: otpEmail, otp })
     });
     if (r.ok) {
-      window.location.replace('contributor.html');
+      if (otpContext === 'forgot_password') {
+        showSetPasswordScreen();
+      } else {
+        window.location.replace('contributor.html');
+      }
     } else {
       const d = await r.json().catch(() => ({}));
       showToast(d.detail || 'Código incorrecto o expirado', true);
@@ -267,12 +454,11 @@ async function doVerify() {
 }
 
 async function doResend() {
-  const endpoint = otpContext === 'login' ? '/auth/login' : '/auth/resend-otp';
   try {
-    const r = await fetch(API_BASE + endpoint, {
+    const r = await fetch(API_BASE + '/auth/resend-email-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: otpPhone })
+      body: JSON.stringify({ email: otpEmail })
     });
     showToast(r.ok ? '✓ Código reenviado' : 'Error al reenviar', !r.ok);
   } catch {

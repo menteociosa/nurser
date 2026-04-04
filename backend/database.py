@@ -55,10 +55,11 @@ def init_db():
         f"""CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
-            phone TEXT UNIQUE NOT NULL,
+            phone TEXT UNIQUE,
             email TEXT,
             password_hash TEXT NOT NULL,
             phone_verified INTEGER NOT NULL DEFAULT 0,
+            email_verified INTEGER NOT NULL DEFAULT 0,
             otp_code TEXT,
             otp_expires_at TEXT,
             google_id TEXT,
@@ -163,6 +164,16 @@ def init_db():
         EXCEPTION WHEN duplicate_column THEN NULL;
         END $$""",
         "CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions(user_id)",
+        # Migration: add email_verified column
+        """DO $$ BEGIN
+            ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0;
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$""",
+        # Migration: make phone column nullable (already done manually, this is a no-op guard)
+        """DO $$ BEGIN
+            ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;
+        EXCEPTION WHEN others THEN NULL;
+        END $$""",
     ]
 
     for stmt in statements:
